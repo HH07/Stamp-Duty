@@ -149,10 +149,10 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
   </div>
 </div>
 <div class="tabs-bar">
-  <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
-  <button class="tab" onclick="switchTab('inputs',this)">✏️ Inputs (Edit)</button>
-  <button class="tab" onclick="switchTab('outputs',this)">📋 Detailed Outputs</button>
-  <button class="tab" onclick="switchTab('cashflows',this)">📅 Cashflows</button>
+  <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
+  <button class="tab" data-tab="inputs">✏️ Inputs (Edit)</button>
+  <button class="tab" data-tab="outputs">📋 Detailed Outputs</button>
+  <button class="tab" data-tab="cashflows">📅 Cashflows</button>
 </div>
 <div class="assumption-bar">
   <strong>Assumptions:</strong> Bridge interest is retained; Refinance is interest-only; Rental growth fixed at 3% p.a. for projections; ICR stress tested at 5.5%; Lender criteria vary. This tool is for illustration only — not financial advice.
@@ -324,108 +324,373 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
     </div>
   </div>
 </div>
+
 <script>
-let charts = {}, state = {};
+// Helper functions
+const el = id => document.getElementById(id);
+const num = id => parseFloat(el(id).value) || 0;
 const £ = v => '£' + Math.round(v).toLocaleString('en-GB');
 const pct = v => v.toFixed(1) + '%';
 const x = v => v.toFixed(2) + 'x';
-const el = id => document.getElementById(id);
-const num = id => parseFloat(el(id).value) || 0;
-function setVal(id, val, cls) { const e = el(id); if (!e) return; e.textContent = val; if (cls) e.className = 'kpi-value ' + cls; }
-function stressClass(pass, warn) { return pass ? 'pass' : warn ? 'warn' : 'fail'; }
-function recalc() {
-  const purchase=num('i-purchase'),gdv=num('i-gdv'),refurb=num('i-refurb'),sdlt=num('i-sdlt'),legal=num('i-legal'),survey=num('i-survey'),otherCost=num('i-other');
-  const bridgeLoan=num('i-bridge-loan'),bridgeRateM=num('i-bridge-rate')/100,bridgeTerm=num('i-bridge-term');
-  const bridgeFee=bridgeLoan*num('i-bridge-fee')/100,bridgeExitFee=bridgeLoan*num('i-bridge-exit')/100;
-  const bridgeInterest=bridgeLoan*bridgeRateM*bridgeTerm,bridgeTotalRepay=bridgeLoan+bridgeInterest+bridgeExitFee;
-  const btlLTV=num('i-btl-ltv')/100,btlLoan=gdv*btlLTV,btlRateA=num('i-btl-rate')/100,btlMonthlyInt=btlLoan*btlRateA/12;
-  const btlFee=num('i-btl-fee'),btlLegal=num('i-btl-legal');
-  const rent=num('i-rent'),rentGrowthA=num('i-rent-growth')/100,mgmtPct=num('i-mgmt')/100;
-  const maintenance=num('i-maintenance'),insurance=num('i-insurance'),voidPct=num('i-void')/100;
-  const totalProjectCost=purchase+sdlt+legal+survey+otherCost+bridgeFee+bridgeInterest+bridgeExitFee+refurb+btlFee+btlLegal;
-  const netCashRequired=totalProjectCost-bridgeLoan,refiProceeds=btlLoan-bridgeTotalRepay,capitalLeftIn=netCashRequired-refiProceeds;
-  const equity=gdv-btlLoan,equityPct=gdv>0?equity/gdv*100:0;
-  const voidCost=rent*voidPct,netRent=rent-voidCost,mgmtCost=rent*mgmtPct,maintMonthly=maintenance/12,insurMonthly=insurance/12;
-  const monthlyRunning=mgmtCost+maintMonthly+insurMonthly,netMonthlyCF=netRent-btlMonthlyInt-monthlyRunning,annualCF=netMonthlyCF*12;
-  const grossYield=gdv>0?(rent*12/gdv)*100:0,netYield=gdv>0?(annualCF/gdv)*100:0,coc=capitalLeftIn>0?(annualCF/capitalLeftIn)*100:0;
-  const stressMonthly=btlLoan*0.055/12,icr=stressMonthly>0?netRent/(stressMonthly*1.25):0;
-  const bridgeLTV=purchase>0?(bridgeLoan/purchase)*100:0,refiPct=netCashRequired>0?(refiProceeds/netCashRequired)*100:0;
-  el('bridge-ltv-hint').textContent=pct(bridgeLTV)+' of purchase price';
-  el('btl-loan-hint').textContent='= '+£(btlLoan)+' loan on '+£(gdv)+' GDV';
-  setVal('kpi-capital',£(netCashRequired));
-  setVal('kpi-equity',£(equity),equity>=0?'positive':'negative');
-  el('kpi-equity-pct').textContent=pct(equityPct)+' of GDV';
-  setVal('kpi-cashflow',£(netMonthlyCF),netMonthlyCF>=0?'positive':'negative');
-  setVal('kpi-yield',pct(grossYield));
-  setVal('kpi-net-yield',pct(netYield));
-  setVal('kpi-coc',pct(coc),coc>=5?'positive':coc>=0?'':'negative');
-  setVal('kpi-icr',x(icr),icr>=1.25?'positive':icr>=1?'warning':'negative');
-  setVal('kpi-refi',£(btlLoan));
-  el('kpi-refi-ltv').textContent=pct(btlLTV*100)+' LTV of GDV';
-  const banner=el('viability-banner');
-  let vClass,vIcon,vTitle,vSub;
-  if(icr>=1.25&&netMonthlyCF>=0&&bridgeLTV<=75&&btlLTV*100<=75){vClass='green';vIcon='✅';vTitle='Deal looks viable';vSub='ICR passes stress test. Cashflow positive. LTVs within lender limits.';}
-  else if(icr>=1.0||netMonthlyCF>=-200){vClass='amber';vIcon='⚠️';vTitle='Deal has concerns — review carefully';vSub=icr<1.25?`ICR of ${x(icr)} below typical 1.25x minimum. May need specialist lender.`:`Monthly cashflow is tight at ${£(netMonthlyCF)}.`;}
-  else{vClass='red';vIcon='❌';vTitle='Deal unlikely to be fundable as modelled';vSub=`ICR of ${x(icr)} — rental income does not cover mortgage at stress rate. Adjust inputs.`;}
-  banner.className='viability-banner '+vClass;
-  el('viability-icon').textContent=vIcon;
-  el('viability-title').textContent=vTitle;
-  el('viability-sub').textContent=vSub;
-  el('stress-icr').className='stress-item '+stressClass(icr>=1.25,icr>=1.0); el('sv-icr').textContent=x(icr);
-  el('stress-ltv').className='stress-item '+stressClass(btlLTV*100<=75,btlLTV*100<=80); el('sv-ltv').textContent=pct(btlLTV*100);
-  el('stress-bridge-ltv').className='stress-item '+stressClass(bridgeLTV<=75,bridgeLTV<=80); el('sv-bridge-ltv').textContent=pct(bridgeLTV);
-  el('stress-cf').className='stress-item '+stressClass(netMonthlyCF>=100,netMonthlyCF>=0); el('sv-cf').textContent=£(netMonthlyCF)+'/mo';
-  el('stress-equity').className='stress-item '+stressClass(equity>0,equity>-5000); el('sv-equity').textContent=£(equity);
-  el('stress-recap').className='stress-item '+stressClass(refiProceeds>=0,refiProceeds>=-10000); el('sv-recap').textContent=£(refiProceeds);
-  el('o-purchase').textContent=£(purchase); el('o-sdlt').textContent=£(sdlt); el('o-legal').textContent=£(legal);
-  el('o-survey').textContent=£(survey); el('o-other').textContent=£(otherCost);
-  el('o-bridge-arr').textContent=£(bridgeFee); el('o-bridge-int').textContent=£(bridgeInterest); el('o-bridge-exit').textContent=£(bridgeExitFee);
-  el('o-refurb').textContent=£(refurb); el('o-btl-fee').textContent=£(btlFee); el('o-btl-legal').textContent=£(btlLegal);
-  el('o-total-cost').textContent=£(totalProjectCost); el('o-bridge-provided').textContent=£(bridgeLoan); el('o-net-cash').textContent=£(netCashRequired);
-  el('o-gdv').textContent=£(gdv); el('o-btl-loan').textContent=£(btlLoan); el('o-bridge-repaid').textContent='('+£(bridgeTotalRepay)+')';
-  el('o-refi-proceeds').textContent=£(refiProceeds); el('o-equity').textContent=£(equity); el('o-capital-in').textContent=£(capitalLeftIn);
-  el('o-rent').textContent=£(rent); el('o-void-cost').textContent='('+£(voidCost)+')'; el('o-net-rent').textContent=£(netRent);
-  el('o-btl-monthly').textContent='('+£(btlMonthlyInt)+')'; el('o-mgmt-cost').textContent='('+£(mgmtCost)+')';
-  el('o-maint-monthly').textContent='('+£(maintMonthly)+')'; el('o-insur-monthly').textContent='('+£(insurMonthly)+')';
-  el('o-net-cf').textContent=£(netMonthlyCF); el('o-net-cf').className='st-value '+(netMonthlyCF>=0?'positive':'negative');
-  el('o-annual-cf').textContent=£(annualCF); el('o-annual-cf').className='st-value '+(annualCF>=0?'positive':'negative');
-  buildCFTable(bridgeTerm,bridgeLoan,bridgeRateM,bridgeInterest,bridgeExitFee,btlMonthlyInt,rent,rentGrowthA,monthlyRunning,voidPct);
-  updateCharts({purchase,sdlt,legal,survey,otherCost,bridgeFee,bridgeInterest,bridgeExitFee,refurb,btlFee,btlLegal,bridgeLoan,btlLoan,btlTerm:parseInt(el('i-btl-term').value),netMonthlyCF,rent,rentGrowthA,monthlyRunning,btlMonthlyInt,voidPct});
-  state={purchase,gdv,refurb,sdlt,legal,bridgeLoan,bridgeRateM,bridgeTerm,bridgeFee,bridgeInterest,bridgeExitFee,btlLoan,btlLTV:btlLTV*100,btlRateA:btlRateA*100,btlMonthlyInt,rent,grossYield,netYield,coc,icr,equity,equityPct,netCashRequired,refiProceeds,capitalLeftIn,netMonthlyCF,annualCF,totalProjectCost,bridgeLTV};
+
+let charts = {};
+let state = {};
+
+function setVal(id, val, cls) {
+  const e = el(id);
+  if (!e) return;
+  e.textContent = val;
+  if (cls) e.className = 'kpi-value ' + cls;
 }
-function buildCFTable(bridgeTerm,bridgeLoan,bridgeRateM,bridgeInterest,bridgeExitFee,btlMonthlyInt,rent,rentGrowthA,monthlyRunning,voidPct) {
-  const tb=el('cf-tbody'); tb.innerHTML=''; let cum=0;
-  for(let m=1;m<=bridgeTerm+60;m++){
-    const isBridge=m<=bridgeTerm,btlMonth=m-bridgeTerm,year=Math.ceil(btlMonth/12);
-    const rentMonth=isBridge?0:rent*Math.pow(1+rentGrowthA,year-1),netRentMonth=rentMonth*(1-voidPct);
-    const bridgeIntMonth=isBridge?bridgeLoan*bridgeRateM:0,btlIntMonth=!isBridge?btlMonthlyInt:0;
-    const runningMonth=!isBridge?monthlyRunning:0,bridgeExitMonth=m===bridgeTerm?bridgeExitFee:0;
-    const net=netRentMonth-bridgeIntMonth-btlIntMonth-runningMonth-bridgeExitMonth; cum+=net;
-    if(m===1||m===bridgeTerm+1||(m>bridgeTerm&&(m-bridgeTerm)%12===1)){
-      const hr=tb.insertRow(); hr.className='phase-head';
-      hr.innerHTML=`<td colspan="8">${isBridge?'🌉 BRIDGE PERIOD — Month '+m:'🏦 BTL PERIOD — Year '+year}</td>`;
-    }
-    const tr=tb.insertRow(); tr.className=isBridge?'bridge-row':'refi-row';
-    tr.innerHTML=`<td>Month ${m}</td><td>${isBridge?'Bridge':'BTL'}</td><td>${rentMonth>0?£(rentMonth):'—'}</td><td>${bridgeIntMonth>0?'('+£(bridgeIntMonth)+')':'—'}</td><td>${btlIntMonth>0?'('+£(btlIntMonth)+')':'—'}</td><td>${runningMonth>0?'('+£(runningMonth)+')':'—'}</td><td class="${net>=0?'positive-cf':'negative-cf'}">${£(net)}</td><td class="${cum>=0?'positive-cf':'negative-cf'}">${£(cum)}</td>`;
+
+function stressClass(pass, warn) {
+  return pass ? 'pass' : warn ? 'warn' : 'fail';
+}
+
+// Tab switching
+document.addEventListener('DOMContentLoaded', function() {
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function() {
+      const tabId = this.getAttribute('data-tab');
+      switchTab(tabId);
+    });
+  });
+  
+  recalc();
+});
+
+function switchTab(id) {
+  // Remove active class from all tabs and panels
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  // Add active class to selected tab and panel
+  el('tab-' + id).classList.add('active');
+  document.querySelector('.tab[data-tab="' + id + '"]').classList.add('active');
+  
+  // Resize cashflow chart if switching to that tab
+  if (id === 'cashflows') {
+    setTimeout(() => {
+      if (charts.cashflow) charts.cashflow.resize();
+    }, 50);
   }
 }
-function updateCharts(d) {
-  if(charts.borrowing) charts.borrowing.destroy();
-  charts.borrowing=new Chart(el('chart-borrowing'),{type:'bar',data:{labels:['Bridge Loan','BTL Refinance'],datasets:[{data:[d.bridgeLoan,d.btlLoan],backgroundColor:['#64748b','#27ae60'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' £'+Math.round(ctx.raw).toLocaleString('en-GB')}}},scales:{y:{ticks:{callback:v=>'£'+v.toLocaleString('en-GB')},grid:{color:'#f1f4f9'}},x:{grid:{display:false}}}}});
-  if(charts.costs) charts.costs.destroy();
-  charts.costs=new Chart(el('chart-costs'),{type:'doughnut',data:{labels:['Purchase','Refurb','Bridge Finance','SDLT','Legal/Other','Refi Costs'],datasets:[{data:[d.purchase,d.refurb,d.bridgeFee+d.bridgeInterest+d.bridgeExitFee,d.sdlt,d.legal+d.survey+d.otherCost,d.btlFee+d.btlLegal],backgroundColor:['#1a2744','#e67e22','#c0392b','#f1c40f','#2980b9','#27ae60'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:ctx=>' £'+Math.round(ctx.raw).toLocaleString('en-GB')}}}}});
-  if(charts.cashflow) charts.cashflow.destroy();
-  const labels=[],data=[];
-  for(let yr=1;yr<=5;yr++){const r=d.rent*Math.pow(1+d.rentGrowthA,yr-1)*12*(1-d.voidPct);labels.push('Year '+yr);data.push(Math.round(r-d.btlMonthlyInt*12-d.monthlyRunning*12));}
-  charts.cashflow=new Chart(el('chart-cashflow'),{type:'bar',data:{labels,datasets:[{label:'Net Annual Cashflow',data,backgroundColor:data.map(v=>v>=0?'#27ae60':'#c0392b'),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' £'+ctx.raw.toLocaleString('en-GB')}}},scales:{y:{ticks:{callback:v=>'£'+v.toLocaleString('en-GB')},grid:{color:'#f1f4f9'}},x:{grid:{display:false}}}}});
+
+function recalc() {
+  const purchase = num('i-purchase');
+  const gdv = num('i-gdv');
+  const refurb = num('i-refurb');
+  const sdlt = num('i-sdlt');
+  const legal = num('i-legal');
+  const survey = num('i-survey');
+  const otherCost = num('i-other');
+  
+  const bridgeLoan = num('i-bridge-loan');
+  const bridgeRateM = num('i-bridge-rate') / 100;
+  const bridgeTerm = num('i-bridge-term');
+  const bridgeFee = bridgeLoan * num('i-bridge-fee') / 100;
+  const bridgeExitFee = bridgeLoan * num('i-bridge-exit') / 100;
+  const bridgeInterest = bridgeLoan * bridgeRateM * bridgeTerm;
+  const bridgeTotalRepay = bridgeLoan + bridgeInterest + bridgeExitFee;
+  
+  const btlLTV = num('i-btl-ltv') / 100;
+  const btlLoan = gdv * btlLTV;
+  const btlRateA = num('i-btl-rate') / 100;
+  const btlMonthlyInt = btlLoan * btlRateA / 12;
+  const btlFee = num('i-btl-fee');
+  const btlLegal = num('i-btl-legal');
+  
+  const rent = num('i-rent');
+  const rentGrowthA = num('i-rent-growth') / 100;
+  const mgmtPct = num('i-mgmt') / 100;
+  const maintenance = num('i-maintenance');
+  const insurance = num('i-insurance');
+  const voidPct = num('i-void') / 100;
+  
+  const totalProjectCost = purchase + sdlt + legal + survey + otherCost + bridgeFee + bridgeInterest + bridgeExitFee + refurb + btlFee + btlLegal;
+  const netCashRequired = totalProjectCost - bridgeLoan;
+  const refiProceeds = btlLoan - bridgeTotalRepay;
+  const capitalLeftIn = netCashRequired - refiProceeds;
+  const equity = gdv - btlLoan;
+  const equityPct = gdv > 0 ? equity / gdv * 100 : 0;
+  
+  const voidCost = rent * voidPct;
+  const netRent = rent - voidCost;
+  const mgmtCost = rent * mgmtPct;
+  const maintMonthly = maintenance / 12;
+  const insurMonthly = insurance / 12;
+  const monthlyRunning = mgmtCost + maintMonthly + insurMonthly;
+  const netMonthlyCF = netRent - btlMonthlyInt - monthlyRunning;
+  const annualCF = netMonthlyCF * 12;
+  
+  const grossYield = gdv > 0 ? (rent * 12 / gdv) * 100 : 0;
+  const netYield = gdv > 0 ? (annualCF / gdv) * 100 : 0;
+  const coc = capitalLeftIn > 0 ? (annualCF / capitalLeftIn) * 100 : 0;
+  
+  const stressMonthly = btlLoan * 0.055 / 12;
+  const icr = stressMonthly > 0 ? netRent / (stressMonthly * 1.25) : 0;
+  const bridgeLTV = purchase > 0 ? (bridgeLoan / purchase) * 100 : 0;
+  
+  el('bridge-ltv-hint').textContent = pct(bridgeLTV) + ' of purchase price';
+  el('btl-loan-hint').textContent = '= ' + £(btlLoan) + ' loan on ' + £(gdv) + ' GDV';
+  
+  setVal('kpi-capital', £(netCashRequired));
+  setVal('kpi-equity', £(equity), equity >= 0 ? 'positive' : 'negative');
+  el('kpi-equity-pct').textContent = pct(equityPct) + ' of GDV';
+  setVal('kpi-cashflow', £(netMonthlyCF), netMonthlyCF >= 0 ? 'positive' : 'negative');
+  setVal('kpi-yield', pct(grossYield));
+  setVal('kpi-net-yield', pct(netYield));
+  setVal('kpi-coc', pct(coc), coc >= 5 ? 'positive' : coc >= 0 ? '' : 'negative');
+  setVal('kpi-icr', x(icr), icr >= 1.25 ? 'positive' : icr >= 1 ? 'warning' : 'negative');
+  setVal('kpi-refi', £(btlLoan));
+  el('kpi-refi-ltv').textContent = pct(btlLTV * 100) + ' LTV of GDV';
+  
+  const banner = el('viability-banner');
+  let vClass, vIcon, vTitle, vSub;
+  if (icr >= 1.25 && netMonthlyCF >= 0 && bridgeLTV <= 75 && btlLTV * 100 <= 75) {
+    vClass = 'green';
+    vIcon = '✅';
+    vTitle = 'Deal looks viable';
+    vSub = 'ICR passes stress test. Cashflow positive. LTVs within lender limits.';
+  } else if (icr >= 1.0 || netMonthlyCF >= -200) {
+    vClass = 'amber';
+    vIcon = '⚠️';
+    vTitle = 'Deal has concerns — review carefully';
+    vSub = icr < 1.25 ? `ICR of ${x(icr)} below typical 1.25x minimum. May need specialist lender.` : `Monthly cashflow is tight at ${£(netMonthlyCF)}.`;
+  } else {
+    vClass = 'red';
+    vIcon = '❌';
+    vTitle = 'Deal unlikely to be fundable as modelled';
+    vSub = `ICR of ${x(icr)} — rental income does not cover mortgage at stress rate. Adjust inputs.`;
+  }
+  banner.className = 'viability-banner ' + vClass;
+  el('viability-icon').textContent = vIcon;
+  el('viability-title').textContent = vTitle;
+  el('viability-sub').textContent = vSub;
+  
+  el('stress-icr').className = 'stress-item ' + stressClass(icr >= 1.25, icr >= 1.0);
+  el('sv-icr').textContent = x(icr);
+  el('stress-ltv').className = 'stress-item ' + stressClass(btlLTV * 100 <= 75, btlLTV * 100 <= 80);
+  el('sv-ltv').textContent = pct(btlLTV * 100);
+  el('stress-bridge-ltv').className = 'stress-item ' + stressClass(bridgeLTV <= 75, bridgeLTV <= 80);
+  el('sv-bridge-ltv').textContent = pct(bridgeLTV);
+  el('stress-cf').className = 'stress-item ' + stressClass(netMonthlyCF >= 100, netMonthlyCF >= 0);
+  el('sv-cf').textContent = £(netMonthlyCF) + '/mo';
+  el('stress-equity').className = 'stress-item ' + stressClass(equity > 0, equity > -5000);
+  el('sv-equity').textContent = £(equity);
+  el('stress-recap').className = 'stress-item ' + stressClass(refiProceeds >= 0, refiProceeds >= -10000);
+  el('sv-recap').textContent = £(refiProceeds);
+  
+  el('o-purchase').textContent = £(purchase);
+  el('o-sdlt').textContent = £(sdlt);
+  el('o-legal').textContent = £(legal);
+  el('o-survey').textContent = £(survey);
+  el('o-other').textContent = £(otherCost);
+  el('o-bridge-arr').textContent = £(bridgeFee);
+  el('o-bridge-int').textContent = £(bridgeInterest);
+  el('o-bridge-exit').textContent = £(bridgeExitFee);
+  el('o-refurb').textContent = £(refurb);
+  el('o-btl-fee').textContent = £(btlFee);
+  el('o-btl-legal').textContent = £(btlLegal);
+  el('o-total-cost').textContent = £(totalProjectCost);
+  el('o-bridge-provided').textContent = £(bridgeLoan);
+  el('o-net-cash').textContent = £(netCashRequired);
+  el('o-gdv').textContent = £(gdv);
+  el('o-btl-loan').textContent = £(btlLoan);
+  el('o-bridge-repaid').textContent = '(' + £(bridgeTotalRepay) + ')';
+  el('o-refi-proceeds').textContent = £(refiProceeds);
+  el('o-equity').textContent = £(equity);
+  el('o-capital-in').textContent = £(capitalLeftIn);
+  el('o-rent').textContent = £(rent);
+  el('o-void-cost').textContent = '(' + £(voidCost) + ')';
+  el('o-net-rent').textContent = £(netRent);
+  el('o-btl-monthly').textContent = '(' + £(btlMonthlyInt) + ')';
+  el('o-mgmt-cost').textContent = '(' + £(mgmtCost) + ')';
+  el('o-maint-monthly').textContent = '(' + £(maintMonthly) + ')';
+  el('o-insur-monthly').textContent = '(' + £(insurMonthly) + ')';
+  el('o-net-cf').textContent = £(netMonthlyCF);
+  el('o-net-cf').className = 'st-value ' + (netMonthlyCF >= 0 ? 'positive' : 'negative');
+  el('o-annual-cf').textContent = £(annualCF);
+  el('o-annual-cf').className = 'st-value ' + (annualCF >= 0 ? 'positive' : 'negative');
+  
+  buildCFTable(bridgeTerm, bridgeLoan, bridgeRateM, bridgeInterest, bridgeExitFee, btlMonthlyInt, rent, rentGrowthA, monthlyRunning, voidPct);
+  updateCharts({purchase, sdlt, legal, survey, otherCost, bridgeFee, bridgeInterest, bridgeExitFee, refurb, btlFee, btlLegal, bridgeLoan, btlLoan, netMonthlyCF, rent, rentGrowthA, monthlyRunning, btlMonthlyInt, voidPct});
+  
+  state = {purchase, gdv, refurb, sdlt, legal, bridgeLoan, bridgeRateM, bridgeTerm, bridgeFee, bridgeInterest, bridgeExitFee, btlLoan, btlLTV: btlLTV * 100, btlRateA: btlRateA * 100, btlMonthlyInt, rent, grossYield, netYield, coc, icr, equity, equityPct, netCashRequired, refiProceeds, capitalLeftIn, netMonthlyCF, annualCF, totalProjectCost, bridgeLTV};
 }
-function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el('tab-'+id).classList.add('active');btn.classList.add('active');if(id==='cashflows')setTimeout(()=>{if(charts.cashflow)charts.cashflow.resize();},50);}
-function resetInputs(){if(!confirm('Reset all inputs to defaults?'))return;const d={'i-purchase':200000,'i-gdv':280000,'i-refurb':30000,'i-sdlt':7500,'i-legal':3000,'i-survey':1500,'i-other':1000,'i-bridge-loan':150000,'i-bridge-rate':0.85,'i-bridge-term':12,'i-bridge-fee':2,'i-bridge-exit':1,'i-btl-ltv':75,'i-btl-rate':5.5,'i-btl-fee':1500,'i-btl-legal':1000,'i-rent':1200,'i-rent-growth':3,'i-mgmt':10,'i-maintenance':1200,'i-insurance':600,'i-void':5};Object.entries(d).forEach(([id,val])=>{el(id).value=val;});recalc();}
-function openEmailModal(){const s=state;el('email-preview').innerHTML=`<h3>EAS Finance — Bridge-to-Let Deal Analysis</h3><p style="color:#64748b;font-size:0.8rem;">Prepared by EAS Finance &bull; ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p><div class="section-title">📊 Deal Summary</div><div class="mp-row"><span>Purchase Price</span><span>${£(s.purchase)}</span></div><div class="mp-row"><span>GDV</span><span>${£(s.gdv)}</span></div><div class="mp-row"><span>Total Project Cost</span><span><strong>${£(s.totalProjectCost)}</strong></span></div><div class="mp-row"><span>Net Cash Required</span><span><strong>${£(s.netCashRequired)}</strong></span></div><div class="section-title">🌉 Bridge Finance</div><div class="mp-row"><span>Bridge Loan</span><span>${£(s.bridgeLoan)} (${pct(s.bridgeLTV)} LTV)</span></div><div class="mp-row"><span>Total Bridge Interest</span><span>${£(s.bridgeInterest)}</span></div><div class="section-title">🏦 BTL Refinance</div><div class="mp-row"><span>BTL Loan</span><span>${£(s.btlLoan)} (${pct(s.btlLTV)} LTV)</span></div><div class="mp-row"><span>Capital Left In</span><span><strong>${£(s.capitalLeftIn)}</strong></span></div><div class="section-title">💷 Rental Performance</div><div class="mp-row"><span>Monthly Net Cashflow</span><span><strong>${£(s.netMonthlyCF)}</strong></span></div><div class="mp-row"><span>Gross Yield</span><span>${pct(s.grossYield)}</span></div><div class="mp-row"><span>Cash-on-Cash Return</span><span>${pct(s.coc)}</span></div><div class="section-title">✅ Deal Health</div><div class="mp-row"><span>ICR (stress 5.5%)</span><span>${x(s.icr)} ${s.icr>=1.25?'✅ Pass':s.icr>=1.0?'⚠️ Marginal':'❌ Fail'}</span></div><div class="mp-row"><span>Day-1 Equity</span><span>${£(s.equity)} (${pct(s.equityPct)} of GDV)</span></div>`;el('email-modal').classList.add('open');}
-function closeEmailModal(){el('email-modal').classList.remove('open');}
-function sendEmail(){const toEmail=el('client-email').value||'',clientName=el('client-name').value||'Client',s=state;const subject=encodeURIComponent(`EAS Finance — Bridge-to-Let Analysis: ${£(s.purchase)} Purchase`);const body=encodeURIComponent(`Dear ${clientName},\n\nPlease find your Bridge-to-Let deal analysis below.\n\n━━━ DEAL SUMMARY ━━━\nPurchase Price: ${£(s.purchase)}\nGDV: ${£(s.gdv)}\nTotal Project Cost: ${£(s.totalProjectCost)}\nNet Cash Required: ${£(s.netCashRequired)}\n\n━━━ BRIDGE FINANCE ━━━\nLoan: ${£(s.bridgeLoan)} (${pct(s.bridgeLTV)} LTV)\nRate: ${(s.bridgeRateM*100).toFixed(2)}%/month\nTotal Interest: ${£(s.bridgeInterest)}\n\n━━━ BTL REFINANCE ━━━\nBTL Loan: ${£(s.btlLoan)} (${pct(s.btlLTV)} LTV)\nRate: ${s.btlRateA.toFixed(2)}% p.a.\nCapital Left In: ${£(s.capitalLeftIn)}\n\n━━━ RENTAL PERFORMANCE ━━━\nMonthly Net Cashflow: ${£(s.netMonthlyCF)}\nGross Yield: ${pct(s.grossYield)}\nCash-on-Cash Return: ${pct(s.coc)}\n\n━━━ DEAL HEALTH ━━━\nICR (stress 5.5%): ${x(s.icr)} ${s.icr>=1.25?'PASS':s.icr>=1.0?'MARGINAL':'FAIL'}\nDay-1 Equity: ${£(s.equity)} (${pct(s.equityPct)} of GDV)\n\nThis analysis is for illustration only and does not constitute financial advice.\nEAS Finance — Specialist Bridge & BTL Mortgage Brokers`);window.location.href=`mailto:${toEmail}?subject=${subject}&body=${body}`;}
-function copyEmail(){const s=state;const text=`EAS Finance — Bridge-to-Let Analysis\nPurchase: ${£(s.purchase)} | GDV: ${£(s.gdv)} | Cash Required: ${£(s.netCashRequired)}\nBridge: ${£(s.bridgeLoan)} @ ${(s.bridgeRateM*100).toFixed(2)}%/mo | BTL Refi: ${£(s.btlLoan)} @ ${s.btlRateA.toFixed(2)}%\nNet Monthly CF: ${£(s.netMonthlyCF)} | ICR: ${x(s.icr)} | Gross Yield: ${pct(s.grossYield)} | CoC: ${pct(s.coc)}`;navigator.clipboard.writeText(text).then(()=>alert('Summary copied to clipboard!'));}
-recalc();
+
+function buildCFTable(bridgeTerm, bridgeLoan, bridgeRateM, bridgeInterest, bridgeExitFee, btlMonthlyInt, rent, rentGrowthA, monthlyRunning, voidPct) {
+  const tb = el('cf-tbody');
+  tb.innerHTML = '';
+  let cum = 0;
+  
+  for (let m = 1; m <= bridgeTerm + 60; m++) {
+    const isBridge = m <= bridgeTerm;
+    const btlMonth = m - bridgeTerm;
+    const year = Math.ceil(btlMonth / 12);
+    const rentMonth = isBridge ? 0 : rent * Math.pow(1 + rentGrowthA, year - 1);
+    const netRentMonth = rentMonth * (1 - voidPct);
+    const bridgeIntMonth = isBridge ? bridgeLoan * bridgeRateM : 0;
+    const btlIntMonth = !isBridge ? btlMonthlyInt : 0;
+    const runningMonth = !isBridge ? monthlyRunning : 0;
+    const bridgeExitMonth = m === bridgeTerm ? bridgeExitFee : 0;
+    const net = netRentMonth - bridgeIntMonth - btlIntMonth - runningMonth - bridgeExitMonth;
+    cum += net;
+    
+    if (m === 1 || m === bridgeTerm + 1 || (m > bridgeTerm && (m - bridgeTerm) % 12 === 1)) {
+      const hr = tb.insertRow();
+      hr.className = 'phase-head';
+      hr.innerHTML = `<td colspan="8">${isBridge ? '🌉 BRIDGE PERIOD — Month ' + m : '🏦 BTL PERIOD — Year ' + year}</td>`;
+    }
+    
+    const tr = tb.insertRow();
+    tr.className = isBridge ? 'bridge-row' : 'refi-row';
+    tr.innerHTML = `<td>Month ${m}</td><td>${isBridge ? 'Bridge' : 'BTL'}</td><td>${rentMonth > 0 ? £(rentMonth) : '—'}</td><td>${bridgeIntMonth > 0 ? '(' + £(bridgeIntMonth) + ')' : '—'}</td><td>${btlIntMonth > 0 ? '(' + £(btlIntMonth) + ')' : '—'}</td><td>${runningMonth > 0 ? '(' + £(runningMonth) + ')' : '—'}</td><td class="${net >= 0 ? 'positive-cf' : 'negative-cf'}">${£(net)}</td><td class="${cum >= 0 ? 'positive-cf' : 'negative-cf'}">${£(cum)}</td>`;
+  }
+}
+
+function updateCharts(d) {
+  if (charts.borrowing) charts.borrowing.destroy();
+  charts.borrowing = new Chart(el('chart-borrowing'), {
+    type: 'bar',
+    data: {
+      labels: ['Bridge Loan', 'BTL Refinance'],
+      datasets: [{
+        data: [d.bridgeLoan, d.btlLoan],
+        backgroundColor: ['#64748b', '#27ae60'],
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {callbacks: {label: ctx => ' £' + Math.round(ctx.raw).toLocaleString('en-GB')}}
+      },
+      scales: {
+        y: {ticks: {callback: v => '£' + v.toLocaleString('en-GB')}, grid: {color: '#f1f4f9'}},
+        x: {grid: {display: false}}
+      }
+    }
+  });
+  
+  if (charts.costs) charts.costs.destroy();
+  charts.costs = new Chart(el('chart-costs'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Purchase', 'Refurb', 'Bridge Finance', 'SDLT', 'Legal/Other', 'Refi Costs'],
+      datasets: [{
+        data: [d.purchase, d.refurb, d.bridgeFee + d.bridgeInterest + d.bridgeExitFee, d.sdlt, d.legal + d.survey + d.otherCost, d.btlFee + d.btlLegal],
+        backgroundColor: ['#1a2744', '#e67e22', '#c0392b', '#f1c40f', '#2980b9', '#27ae60'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: {position: 'right', labels: {font: {size: 11}, boxWidth: 12}},
+        tooltip: {callbacks: {label: ctx => ' £' + Math.round(ctx.raw).toLocaleString('en-GB')}}
+      }
+    }
+  });
+  
+  if (charts.cashflow) charts.cashflow.destroy();
+  const labels = [];
+  const data = [];
+  for (let yr = 1; yr <= 5; yr++) {
+    const r = d.rent * Math.pow(1 + d.rentGrowthA, yr - 1) * 12 * (1 - d.voidPct);
+    labels.push('Year ' + yr);
+    data.push(Math.round(r - d.btlMonthlyInt * 12 - d.monthlyRunning * 12));
+  }
+  charts.cashflow = new Chart(el('chart-cashflow'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Net Annual Cashflow',
+        data,
+        backgroundColor: data.map(v => v >= 0 ? '#27ae60' : '#c0392b'),
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {callbacks: {label: ctx => ' £' + ctx.raw.toLocaleString('en-GB')}}
+      },
+      scales: {
+        y: {ticks: {callback: v => '£' + v.toLocaleString('en-GB')}, grid: {color: '#f1f4f9'}},
+        x: {grid: {display: false}}
+      }
+    }
+  });
+}
+
+function resetInputs() {
+  if (!confirm('Reset all inputs to defaults?')) return;
+  const defaults = {
+    'i-purchase': 200000,
+    'i-gdv': 280000,
+    'i-refurb': 30000,
+    'i-sdlt': 7500,
+    'i-legal': 3000,
+    'i-survey': 1500,
+    'i-other': 1000,
+    'i-bridge-loan': 150000,
+    'i-bridge-rate': 0.85,
+    'i-bridge-term': 12,
+    'i-bridge-fee': 2,
+    'i-bridge-exit': 1,
+    'i-btl-ltv': 75,
+    'i-btl-rate': 5.5,
+    'i-btl-fee': 1500,
+    'i-btl-legal': 1000,
+    'i-rent': 1200,
+    'i-rent-growth': 3,
+    'i-mgmt': 10,
+    'i-maintenance': 1200,
+    'i-insurance': 600,
+    'i-void': 5
+  };
+  Object.entries(defaults).forEach(([id, val]) => {
+    el(id).value = val;
+  });
+  recalc();
+}
+
+function openEmailModal() {
+  const s = state;
+  el('email-preview').innerHTML = `<h3>EAS Finance — Bridge-to-Let Deal Analysis</h3><p style="color:#64748b;font-size:0.8rem;">Prepared by EAS Finance &bull; ${new Date().toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'})}</p><div class="section-title">📊 Deal Summary</div><div class="mp-row"><span>Purchase Price</span><span>${£(s.purchase)}</span></div><div class="mp-row"><span>GDV</span><span>${£(s.gdv)}</span></div><div class="mp-row"><span>Total Project Cost</span><span><strong>${£(s.totalProjectCost)}</strong></span></div><div class="mp-row"><span>Net Cash Required</span><span><strong>${£(s.netCashRequired)}</strong></span></div><div class="section-title">🌉 Bridge Finance</div><div class="mp-row"><span>Bridge Loan</span><span>${£(s.bridgeLoan)} (${pct(s.bridgeLTV)} LTV)</span></div><div class="mp-row"><span>Total Bridge Interest</span><span>${£(s.bridgeInterest)}</span></div><div class="section-title">🏦 BTL Refinance</div><div class="mp-row"><span>BTL Loan</span><span>${£(s.btlLoan)} (${pct(s.btlLTV)} LTV)</span></div><div class="mp-row"><span>Capital Left In</span><span><strong>${£(s.capitalLeftIn)}</strong></span></div><div class="section-title">💷 Rental Performance</div><div class="mp-row"><span>Monthly Net Cashflow</span><span><strong>${£(s.netMonthlyCF)}</strong></span></div><div class="mp-row"><span>Gross Yield</span><span>${pct(s.grossYield)}</span></div><div class="mp-row"><span>Cash-on-Cash Return</span><span>${pct(s.coc)}</span></div><div class="section-title">✅ Deal Health</div><div class="mp-row"><span>ICR (stress 5.5%)</span><span>${x(s.icr)} ${s.icr >= 1.25 ? '✅ Pass' : s.icr >= 1.0 ? '⚠️ Marginal' : '❌ Fail'}</span></div><div class="mp-row"><span>Day-1 Equity</span><span>${£(s.equity)} (${pct(s.equityPct)} of GDV)</span></div>`;
+  el('email-modal').classList.add('open');
+}
+
+function closeEmailModal() {
+  el('email-modal').classList.remove('open');
+}
+
+function sendEmail() {
+  const toEmail = el('client-email').value || '';
+  const clientName = el('client-name').value || 'Client';
+  const s = state;
+  const subject = encodeURIComponent(`EAS Finance — Bridge-to-Let Analysis: ${£(s.purchase)} Purchase`);
+  const body = encodeURIComponent(`Dear ${clientName},\n\nPlease find your Bridge-to-Let deal analysis below.\n\n━━━ DEAL SUMMARY ━━━\nPurchase Price: ${£(s.purchase)}\nGDV: ${£(s.gdv)}\nTotal Project Cost: ${£(s.totalProjectCost)}\nNet Cash Required: ${£(s.netCashRequired)}\n\n━━━ BRIDGE FINANCE ━━━\nLoan: ${£(s.bridgeLoan)} (${pct(s.bridgeLTV)} LTV)\nRate: ${(s.bridgeRateM * 100).toFixed(2)}%/month\nTotal Interest: ${£(s.bridgeInterest)}\n\n━━━ BTL REFINANCE ━━━\nBTL Loan: ${£(s.btlLoan)} (${pct(s.btlLTV)} LTV)\nRate: ${s.btlRateA.toFixed(2)}% p.a.\nCapital Left In: ${£(s.capitalLeftIn)}\n\n━━━ RENTAL PERFORMANCE ━━━\nMonthly Net Cashflow: ${£(s.netMonthlyCF)}\nGross Yield: ${pct(s.grossYield)}\nCash-on-Cash Return: ${pct(s.coc)}\n\n━━━ DEAL HEALTH ━━━\nICR (stress 5.5%): ${x(s.icr)} ${s.icr >= 1.25 ? 'PASS' : s.icr >= 1.0 ? 'MARGINAL' : 'FAIL'}\nDay-1 Equity: ${£(s.equity)} (${pct(s.equityPct)} of GDV)\n\nThis analysis is for illustration only and does not constitute financial advice.\nEAS Finance — Specialist Bridge & BTL Mortgage Brokers`);
+  window.location.href = `mailto:${toEmail}?subject=${subject}&body=${body}`;
+}
+
+function copyEmail() {
+  const s = state;
+  const text = `EAS Finance — Bridge-to-Let Analysis\nPurchase: ${£(s.purchase)} | GDV: ${£(s.gdv)} | Cash Required: ${£(s.netCashRequired)}\nBridge: ${£(s.bridgeLoan)} @ ${(s.bridgeRateM * 100).toFixed(2)}%/mo | BTL Refi: ${£(s.btlLoan)} @ ${s.btlRateA.toFixed(2)}%\nNet Monthly CF: ${£(s.netMonthlyCF)} | ICR: ${x(s.icr)} | Gross Yield: ${pct(s.grossYield)} | CoC: ${pct(s.coc)}`;
+  navigator.clipboard.writeText(text).then(() => alert('Summary copied to clipboard!'));
+}
 </script>
 </body>
 </html>
