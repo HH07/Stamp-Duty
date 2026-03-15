@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAS Finance | Bridge-to-Let Analyser</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #1a2744; --navy2: #243159; --navy3: #2d3d6e;
+  --green: #27ae60; --green-light: #2ecc71; --blue: #2980b9;
+  --orange: #e67e22; --red: #c0392b; --amber: #f39c12;
+  --white: #ffffff; --gray-50: #f8fafc; --gray-100: #f1f4f9;
+  --gray-200: #e2e8f0; --gray-400: #94a3b8; --gray-600: #64748b;
+  --gray-800: #1e293b; --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --shadow: 0 2px 12px rgba(26,39,68,0.10);
+  --shadow-lg: 0 8px 32px rgba(26,39,68,0.15);
+  --radius: 10px; --radius-sm: 6px;
+}
+body { font-family: var(--font-body); background: var(--gray-50); color: var(--gray-800); min-height: 100vh; }
+.header { background: var(--navy); color: white; text-align: center; padding: 28px 20px 22px; border-bottom: 3px solid var(--green); }
+.header h1 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; }
+.header p { font-size: 0.85rem; color: rgba(255,255,255,0.65); margin-top: 4px; }
+.header-actions { display: flex; justify-content: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.18s; text-decoration: none; }
+.btn-dark { background: #2d3d6e; color: white; }
+.btn-dark:hover { background: #3a4f8a; }
+.btn-green { background: var(--green); color: white; }
+.btn-green:hover { background: #219a52; }
+.btn-outline { background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.4); }
+.btn-outline:hover { border-color: white; background: rgba(255,255,255,0.08); }
+.tabs-bar { background: white; border-bottom: 1px solid var(--gray-200); display: flex; gap: 0; padding: 0 24px; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; overflow-x: auto; }
+.tab { padding: 14px 22px; font-size: 0.875rem; font-weight: 500; color: var(--gray-600); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.18s; background: none; border-top: none; border-left: none; border-right: none; font-family: var(--font-body); }
+.tab:hover { color: var(--navy); }
+.tab.active { color: var(--navy); border-bottom-color: var(--green); font-weight: 600; }
+.assumption-bar { background: #fffbeb; border-left: 3px solid var(--amber); padding: 8px 20px; font-size: 0.78rem; color: #92400e; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.viability-banner { border-radius: var(--radius); padding: 16px 22px; margin-bottom: 22px; display: flex; align-items: center; gap: 14px; font-weight: 600; font-size: 1rem; }
+.viability-banner.green { background: #d1fae5; color: #065f46; border-left: 5px solid var(--green); }
+.viability-banner.amber { background: #fef3c7; color: #92400e; border-left: 5px solid var(--amber); }
+.viability-banner.red { background: #fee2e2; color: #7f1d1d; border-left: 5px solid var(--red); }
+.viability-banner .icon { font-size: 1.5rem; }
+.viability-sub { font-size: 0.82rem; font-weight: 400; margin-top: 2px; opacity: 0.85; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.kpi-card { background: white; border-radius: var(--radius); padding: 18px 16px; box-shadow: var(--shadow); border-top: 3px solid var(--gray-200); transition: transform 0.15s; }
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card.navy { border-top-color: var(--navy); }
+.kpi-card.green { border-top-color: var(--green); }
+.kpi-card.blue { border-top-color: var(--blue); }
+.kpi-card.orange { border-top-color: var(--orange); }
+.kpi-card.red { border-top-color: var(--red); }
+.kpi-card.amber { border-top-color: var(--amber); }
+.kpi-label { font-size: 0.74rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--gray-600); margin-bottom: 6px; }
+.kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1; }
+.kpi-value.positive { color: var(--green); }
+.kpi-value.negative { color: var(--red); }
+.kpi-value.warning { color: var(--amber); }
+.kpi-sub { font-size: 0.75rem; color: var(--gray-600); margin-top: 4px; }
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; }
+@media (max-width: 680px) { .charts-row { grid-template-columns: 1fr; } }
+.chart-card { background: white; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.chart-card h3 { font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--gray-100); }
+.chart-wrapper { position: relative; height: 220px; }
+.summary-table { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 24px; }
+.summary-table h3 { font-size: 0.9rem; font-weight: 600; color: var(--navy); padding: 16px 20px; border-bottom: 1px solid var(--gray-100); }
+.st-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 20px; border-bottom: 1px solid var(--gray-50); font-size: 0.875rem; }
+.st-row:last-child { border-bottom: none; }
+.st-row.total { background: var(--gray-50); font-weight: 700; }
+.st-row.section-head { background: var(--navy); color: white; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.st-label { color: var(--gray-600); }
+.st-row.total .st-label { color: var(--navy); }
+.st-value { font-weight: 600; color: var(--gray-800); }
+.st-value.positive { color: var(--green); }
+.st-value.negative { color: var(--red); }
+.stress-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 24px; }
+.stress-card h3 { font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--gray-100); }
+.stress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.stress-item { padding: 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--gray-200); }
+.stress-item.pass { border-color: #86efac; background: #f0fdf4; }
+.stress-item.fail { border-color: #fca5a5; background: #fef2f2; }
+.stress-item.warn { border-color: #fcd34d; background: #fffbeb; }
+.stress-name { font-size: 0.78rem; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.04em; }
+.stress-val { font-size: 1.3rem; font-weight: 700; margin: 4px 0 2px; }
+.stress-item.pass .stress-val { color: #166534; }
+.stress-item.fail .stress-val { color: #991b1b; }
+.stress-item.warn .stress-val { color: #92400e; }
+.stress-note { font-size: 0.75rem; color: var(--gray-600); }
+.inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 700px) { .inputs-grid { grid-template-columns: 1fr; } }
+.input-section { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.input-section-head { background: var(--navy); color: white; padding: 12px 20px; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; }
+.input-body { padding: 16px 20px; }
+.input-row { margin-bottom: 14px; }
+.input-row:last-child { margin-bottom: 0; }
+label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--gray-600); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
+.input-wrap { position: relative; }
+.input-prefix, .input-suffix { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.875rem; font-weight: 600; color: var(--gray-400); pointer-events: none; }
+.input-prefix { left: 11px; }
+.input-suffix { right: 11px; }
+input[type="number"], input[type="text"], input[type="email"], select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.9rem; color: var(--gray-800); background: var(--gray-50); transition: border-color 0.15s; -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input:focus, select:focus { outline: none; border-color: var(--navy); background: white; }
+.has-prefix input { padding-left: 26px; }
+.has-suffix input { padding-right: 36px; }
+.input-hint { font-size: 0.73rem; color: var(--gray-400); margin-top: 3px; }
+.cf-table-wrap { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto; }
+.cf-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+.cf-table th { background: var(--navy); color: white; padding: 11px 14px; text-align: right; font-weight: 600; font-size: 0.75rem; white-space: nowrap; }
+.cf-table th:first-child { text-align: left; }
+.cf-table td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--gray-100); }
+.cf-table td:first-child { text-align: left; font-weight: 500; color: var(--navy); }
+.cf-table tr:nth-child(even) td { background: var(--gray-50); }
+.cf-table .bridge-row td { background: #eff6ff !important; }
+.cf-table .refi-row td { background: #f0fdf4 !important; }
+.cf-table .positive-cf { color: var(--green); font-weight: 600; }
+.cf-table .negative-cf { color: var(--red); font-weight: 600; }
+.cf-table .phase-head td { background: var(--navy2) !important; color: white; font-weight: 600; font-size: 0.75rem; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 100%; max-width: 560px; overflow: hidden; }
+.modal-head { background: var(--navy); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+.modal-head h2 { font-family: var(--font-display); font-size: 1.1rem; }
+.modal-close { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; line-height: 1; }
+.modal-body { padding: 24px; }
+.modal-preview { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 16px; font-size: 0.82rem; line-height: 1.7; margin-bottom: 18px; max-height: 300px; overflow-y: auto; color: var(--gray-800); }
+.modal-preview h3 { color: var(--navy); font-size: 0.95rem; margin-bottom: 8px; }
+.modal-preview .mp-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted var(--gray-200); }
+.modal-preview .mp-row:last-child { border: none; }
+.modal-preview .section-title { font-weight: 700; color: var(--navy); margin: 12px 0 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.email-input-row { display: flex; gap: 10px; }
+.email-input-row input { flex: 1; }
+.modal-footer { font-size: 0.75rem; color: var(--gray-400); margin-top: 10px; }
+@media (max-width: 540px) { .header h1 { font-size: 1.4rem; } .kpi-grid { grid-template-columns: 1fr 1fr; } .kpi-value { font-size: 1.3rem; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>EAS Finance &nbsp;|&nbsp; Bridge-to-Let Analyser</h1>
+  <p>Professional deal analysis for bridge finance &amp; buy-to-let refinance</p>
+  <div class="header-actions">
+    <button class="btn btn-dark" onclick="resetInputs()">↺ Reset Inputs</button>
+    <button class="btn btn-green" onclick="openEmailModal()">✉ Create Email Summary</button>
+    <button class="btn btn-outline" onclick="window.print()">⎙ Print</button>
+  </div>
+</div>
+<div class="tabs-bar">
+  <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+  <button class="tab" onclick="switchTab('inputs',this)">✏️ Inputs (Edit)</button>
+  <button class="tab" onclick="switchTab('outputs',this)">📋 Detailed Outputs</button>
+  <button class="tab" onclick="switchTab('cashflows',this)">📅 Cashflows</button>
+</div>
+<div class="assumption-bar">
+  <strong>Assumptions:</strong> Bridge interest is retained; Refinance is interest-only; Rental growth fixed at 3% p.a. for projections; ICR stress tested at 5.5%; Lender criteria vary. This tool is for illustration only — not financial advice.
+</div>
+<div id="tab-dashboard" class="tab-panel active">
+<div class="container">
+  <div id="viability-banner" class="viability-banner green">
+    <span class="icon" id="viability-icon">✅</span>
+    <div>
+      <div id="viability-title">Deal looks viable</div>
+      <div class="viability-sub" id="viability-sub">Rental income covers mortgage payments. Positive day-1 equity. Review detailed outputs.</div>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card navy"><div class="kpi-label">Total Capital Required</div><div class="kpi-value" id="kpi-capital">£0</div><div class="kpi-sub">Cash needed day 1</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Day-1 Equity (GDV)</div><div class="kpi-value positive" id="kpi-equity">£0</div><div class="kpi-sub" id="kpi-equity-pct">0% of GDV</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">Monthly Net Cashflow</div><div class="kpi-value" id="kpi-cashflow">£0</div><div class="kpi-sub">After BTL mortgage</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Gross Yield</div><div class="kpi-value" id="kpi-yield">0.0%</div><div class="kpi-sub">Based on GDV</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">Net Yield</div><div class="kpi-value" id="kpi-net-yield">0.0%</div><div class="kpi-sub">After costs</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Cash-on-Cash Return</div><div class="kpi-value positive" id="kpi-coc">0.0%</div><div class="kpi-sub">Annual / capital in</div></div>
+    <div class="kpi-card navy"><div class="kpi-label">ICR (Stress 5.5%)</div><div class="kpi-value" id="kpi-icr">0.0x</div><div class="kpi-sub">Min. 1.25x required</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">BTL Refinance Amount</div><div class="kpi-value" id="kpi-refi">£0</div><div class="kpi-sub" id="kpi-refi-ltv">0% LTV of GDV</div></div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card"><h3>Borrowing Power — Bridge vs BTL Refinance</h3><div class="chart-wrapper"><canvas id="chart-borrowing"></canvas></div></div>
+    <div class="chart-card"><h3>Project Cost Breakdown</h3><div class="chart-wrapper"><canvas id="chart-costs"></canvas></div></div>
+  </div>
+  <div class="stress-card">
+    <h3>🔬 Lender Stress Tests &amp; Deal Health</h3>
+    <div class="stress-grid">
+      <div class="stress-item" id="stress-icr"><div class="stress-name">Interest Cover Ratio</div><div class="stress-val" id="sv-icr">—</div><div class="stress-note">Rent ÷ (Mortgage × 1.25 stress). Min 1.25x</div></div>
+      <div class="stress-item" id="stress-ltv"><div class="stress-name">BTL LTV</div><div class="stress-val" id="sv-ltv">—</div><div class="stress-note">Max 75% typical high-st lender</div></div>
+      <div class="stress-item" id="stress-bridge-ltv"><div class="stress-name">Bridge LTV</div><div class="stress-val" id="sv-bridge-ltv">—</div><div class="stress-note">Max 75% of purchase / 70% GDV</div></div>
+      <div class="stress-item" id="stress-cf"><div class="stress-name">Monthly Cashflow</div><div class="stress-val" id="sv-cf">—</div><div class="stress-note">Rent minus BTL interest &amp; costs</div></div>
+      <div class="stress-item" id="stress-equity"><div class="stress-name">Equity Created</div><div class="stress-val" id="sv-equity">—</div><div class="stress-note">GDV minus total cost stack</div></div>
+      <div class="stress-item" id="stress-recap"><div class="stress-name">Capital Recaptured</div><div class="stress-val" id="sv-recap">—</div><div class="stress-note">Refi proceeds vs total spend</div></div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="tab-inputs" class="tab-panel">
+<div class="container">
+<div class="inputs-grid">
+  <div class="input-section">
+    <div class="input-section-head">🏠 Property Details</div>
+    <div class="input-body">
+      <div class="input-row"><label>Purchase Price</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-purchase" value="200000" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Gross Development Value (GDV)</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-gdv" value="280000" onchange="recalc()"></div><div class="input-hint">Estimated value after refurbishment</div></div>
+      <div class="input-row"><label>Refurbishment / Renovation Cost</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-refurb" value="30000" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Stamp Duty (SDLT)</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-sdlt" value="7500" onchange="recalc()"></div><div class="input-hint">Including 3% surcharge if applicable</div></div>
+      <div class="input-row"><label>Legal / Solicitor Fees</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-legal" value="3000" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Survey / Valuation Fees</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-survey" value="1500" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Other Purchase Costs</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-other" value="1000" onchange="recalc()"></div></div>
+    </div>
+  </div>
+  <div class="input-section">
+    <div class="input-section-head">🌉 Bridge Finance</div>
+    <div class="input-body">
+      <div class="input-row"><label>Bridge Loan Amount</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-bridge-loan" value="150000" onchange="recalc()"></div><div class="input-hint" id="bridge-ltv-hint"></div></div>
+      <div class="input-row"><label>Bridge Interest Rate (per month)</label><div class="input-wrap has-suffix"><input type="number" id="i-bridge-rate" value="0.85" step="0.01" onchange="recalc()"><span class="input-suffix">%/m</span></div></div>
+      <div class="input-row"><label>Bridge Term (months)</label><div class="input-wrap"><input type="number" id="i-bridge-term" value="12" onchange="recalc()"></div><div class="input-hint">Typically 3–18 months</div></div>
+      <div class="input-row"><label>Bridge Arrangement Fee</label><div class="input-wrap has-suffix"><input type="number" id="i-bridge-fee" value="2" step="0.1" onchange="recalc()"><span class="input-suffix">%</span></div></div>
+      <div class="input-row"><label>Bridge Exit Fee</label><div class="input-wrap has-suffix"><input type="number" id="i-bridge-exit" value="1" step="0.1" onchange="recalc()"><span class="input-suffix">%</span></div></div>
+    </div>
+  </div>
+  <div class="input-section">
+    <div class="input-section-head">🏦 BTL Refinance (Exit from Bridge)</div>
+    <div class="input-body">
+      <div class="input-row"><label>BTL LTV (%)</label><div class="input-wrap has-suffix"><input type="number" id="i-btl-ltv" value="75" step="1" onchange="recalc()"><span class="input-suffix">%</span></div><div class="input-hint" id="btl-loan-hint"></div></div>
+      <div class="input-row"><label>BTL Interest Rate (annual)</label><div class="input-wrap has-suffix"><input type="number" id="i-btl-rate" value="5.5" step="0.1" onchange="recalc()"><span class="input-suffix">%</span></div></div>
+      <div class="input-row"><label>BTL Product Term (years)</label><div class="input-wrap"><select id="i-btl-term" onchange="recalc()"><option value="2" selected>2 Year Fixed</option><option value="5">5 Year Fixed</option><option value="10">10 Year Fixed</option></select></div></div>
+      <div class="input-row"><label>Refinance Arrangement Fee</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-btl-fee" value="1500" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Refinance Legal Fees</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-btl-legal" value="1000" onchange="recalc()"></div></div>
+    </div>
+  </div>
+  <div class="input-section">
+    <div class="input-section-head">💷 Rental Income &amp; Running Costs</div>
+    <div class="input-body">
+      <div class="input-row"><label>Monthly Gross Rent</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-rent" value="1200" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Annual Rental Growth</label><div class="input-wrap has-suffix"><input type="number" id="i-rent-growth" value="3" step="0.5" onchange="recalc()"><span class="input-suffix">%</span></div></div>
+      <div class="input-row"><label>Management Fee</label><div class="input-wrap has-suffix"><input type="number" id="i-mgmt" value="10" step="1" onchange="recalc()"><span class="input-suffix">%</span></div><div class="input-hint">% of monthly rent</div></div>
+      <div class="input-row"><label>Annual Maintenance / Repairs</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-maintenance" value="1200" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Annual Landlord Insurance</label><div class="input-wrap has-prefix"><span class="input-prefix">£</span><input type="number" id="i-insurance" value="600" onchange="recalc()"></div></div>
+      <div class="input-row"><label>Void Allowance</label><div class="input-wrap has-suffix"><input type="number" id="i-void" value="5" step="1" onchange="recalc()"><span class="input-suffix">%</span></div><div class="input-hint">% of rent lost to vacancies</div></div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+<div id="tab-outputs" class="tab-panel">
+<div class="container">
+  <div class="summary-table" style="margin-bottom:18px;">
+    <h3>💰 Full Cost Stack &amp; Capital Required</h3>
+    <div class="st-row section-head"><span>Acquisition Costs</span><span></span></div>
+    <div class="st-row"><span class="st-label">Purchase Price</span><span class="st-value" id="o-purchase">£0</span></div>
+    <div class="st-row"><span class="st-label">Stamp Duty (SDLT)</span><span class="st-value" id="o-sdlt">£0</span></div>
+    <div class="st-row"><span class="st-label">Legal Fees</span><span class="st-value" id="o-legal">£0</span></div>
+    <div class="st-row"><span class="st-label">Survey / Valuation</span><span class="st-value" id="o-survey">£0</span></div>
+    <div class="st-row"><span class="st-label">Other Costs</span><span class="st-value" id="o-other">£0</span></div>
+    <div class="st-row section-head"><span>Finance Costs (Bridge)</span><span></span></div>
+    <div class="st-row"><span class="st-label">Bridge Arrangement Fee</span><span class="st-value" id="o-bridge-arr">£0</span></div>
+    <div class="st-row"><span class="st-label">Bridge Rolled Interest</span><span class="st-value" id="o-bridge-int">£0</span></div>
+    <div class="st-row"><span class="st-label">Bridge Exit Fee</span><span class="st-value" id="o-bridge-exit">£0</span></div>
+    <div class="st-row section-head"><span>Refurbishment</span><span></span></div>
+    <div class="st-row"><span class="st-label">Refurb / Renovation</span><span class="st-value" id="o-refurb">£0</span></div>
+    <div class="st-row section-head"><span>Refinance Costs</span><span></span></div>
+    <div class="st-row"><span class="st-label">BTL Arrangement Fee</span><span class="st-value" id="o-btl-fee">£0</span></div>
+    <div class="st-row"><span class="st-label">BTL Legal Fees</span><span class="st-value" id="o-btl-legal">£0</span></div>
+    <div class="st-row total"><span class="st-label">TOTAL PROJECT COST</span><span class="st-value" id="o-total-cost">£0</span></div>
+    <div class="st-row total"><span class="st-label">Bridge Loan Provided</span><span class="st-value positive" id="o-bridge-provided">£0</span></div>
+    <div class="st-row total" style="background:#1a2744; color:white;"><span style="color:white; font-weight:700;">NET CASH REQUIRED (DAY 1)</span><span class="st-value" style="color:#2ecc71; font-weight:700;" id="o-net-cash">£0</span></div>
+  </div>
+  <div class="summary-table" style="margin-bottom:18px;">
+    <h3>🏦 Refinance &amp; Equity Position</h3>
+    <div class="st-row"><span class="st-label">Gross Development Value (GDV)</span><span class="st-value" id="o-gdv">£0</span></div>
+    <div class="st-row"><span class="st-label">BTL Loan (LTV × GDV)</span><span class="st-value" id="o-btl-loan">£0</span></div>
+    <div class="st-row"><span class="st-label">Bridge Loan Repaid (incl. interest &amp; fees)</span><span class="st-value negative" id="o-bridge-repaid">£0</span></div>
+    <div class="st-row"><span class="st-label">Net Refinance Proceeds</span><span class="st-value positive" id="o-refi-proceeds">£0</span></div>
+    <div class="st-row total"><span class="st-label">Equity in Property Post-Refi</span><span class="st-value positive" id="o-equity">£0</span></div>
+    <div class="st-row total"><span class="st-label">Capital Left In (after refi)</span><span class="st-value" id="o-capital-in">£0</span></div>
+  </div>
+  <div class="summary-table">
+    <h3>📅 Monthly Rental P&amp;L (Post-Refinance)</h3>
+    <div class="st-row section-head"><span>Income</span><span></span></div>
+    <div class="st-row"><span class="st-label">Gross Monthly Rent</span><span class="st-value positive" id="o-rent">£0</span></div>
+    <div class="st-row"><span class="st-label">Less: Void Allowance</span><span class="st-value negative" id="o-void-cost">£0</span></div>
+    <div class="st-row"><span class="st-label">Net Effective Rent</span><span class="st-value" id="o-net-rent">£0</span></div>
+    <div class="st-row section-head"><span>Costs</span><span></span></div>
+    <div class="st-row"><span class="st-label">BTL Monthly Interest</span><span class="st-value negative" id="o-btl-monthly">£0</span></div>
+    <div class="st-row"><span class="st-label">Management Fee</span><span class="st-value negative" id="o-mgmt-cost">£0</span></div>
+    <div class="st-row"><span class="st-label">Maintenance (monthly equiv.)</span><span class="st-value negative" id="o-maint-monthly">£0</span></div>
+    <div class="st-row"><span class="st-label">Insurance (monthly equiv.)</span><span class="st-value negative" id="o-insur-monthly">£0</span></div>
+    <div class="st-row total"><span class="st-label">NET MONTHLY CASHFLOW</span><span class="st-value" id="o-net-cf">£0</span></div>
+    <div class="st-row total"><span class="st-label">NET ANNUAL CASHFLOW</span><span class="st-value" id="o-annual-cf">£0</span></div>
+  </div>
+</div>
+</div>
+<div id="tab-cashflows" class="tab-panel">
+<div class="container">
+  <div style="background:white; border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; margin-bottom:18px;">
+    <h3 style="font-size:0.9rem; font-weight:600; color:var(--navy); margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--gray-100);">📈 Projected Cashflow Chart (5 Years Post-Refi)</h3>
+    <div style="position:relative; height:240px;"><canvas id="chart-cashflow"></canvas></div>
+  </div>
+  <div class="cf-table-wrap">
+    <table class="cf-table">
+      <thead><tr><th>Period</th><th>Phase</th><th>Gross Rent</th><th>Bridge Int.</th><th>BTL Int.</th><th>Running Costs</th><th>Net Cashflow</th><th>Cumulative</th></tr></thead>
+      <tbody id="cf-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+<div class="modal-overlay" id="email-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>✉ Email Deal Summary to Client</h2>
+      <button class="modal-close" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-preview" id="email-preview"></div>
+      <div class="email-input-row">
+        <input type="email" id="client-email" placeholder="client@example.com" style="flex:1;">
+        <input type="text" id="client-name" placeholder="Client name" style="width:150px;">
+      </div>
+      <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-green" onclick="sendEmail()" style="flex:1;">📤 Send via Email Client</button>
+        <button class="btn btn-dark" onclick="copyEmail()">📋 Copy to Clipboard</button>
+      </div>
+      <div class="modal-footer">This opens your default email app with the summary pre-filled. No data is stored or transmitted by this tool.</div>
+    </div>
+  </div>
+</div>
+<script>
+let charts = {}, state = {};
+const £ = v => '£' + Math.round(v).toLocaleString('en-GB');
+const pct = v => v.toFixed(1) + '%';
+const x = v => v.toFixed(2) + 'x';
+const el = id => document.getElementById(id);
+const num = id => parseFloat(el(id).value) || 0;
+function setVal(id, val, cls) { const e = el(id); if (!e) return; e.textContent = val; if (cls) e.className = 'kpi-value ' + cls; }
+function stressClass(pass, warn) { return pass ? 'pass' : warn ? 'warn' : 'fail'; }
+function recalc() {
+  const purchase=num('i-purchase'),gdv=num('i-gdv'),refurb=num('i-refurb'),sdlt=num('i-sdlt'),legal=num('i-legal'),survey=num('i-survey'),otherCost=num('i-other');
+  const bridgeLoan=num('i-bridge-loan'),bridgeRateM=num('i-bridge-rate')/100,bridgeTerm=num('i-bridge-term');
+  const bridgeFee=bridgeLoan*num('i-bridge-fee')/100,bridgeExitFee=bridgeLoan*num('i-bridge-exit')/100;
+  const bridgeInterest=bridgeLoan*bridgeRateM*bridgeTerm,bridgeTotalRepay=bridgeLoan+bridgeInterest+bridgeExitFee;
+  const btlLTV=num('i-btl-ltv')/100,btlLoan=gdv*btlLTV,btlRateA=num('i-btl-rate')/100,btlMonthlyInt=btlLoan*btlRateA/12;
+  const btlFee=num('i-btl-fee'),btlLegal=num('i-btl-legal');
+  const rent=num('i-rent'),rentGrowthA=num('i-rent-growth')/100,mgmtPct=num('i-mgmt')/100;
+  const maintenance=num('i-maintenance'),insurance=num('i-insurance'),voidPct=num('i-void')/100;
+  const totalProjectCost=purchase+sdlt+legal+survey+otherCost+bridgeFee+bridgeInterest+bridgeExitFee+refurb+btlFee+btlLegal;
+  const netCashRequired=totalProjectCost-bridgeLoan,refiProceeds=btlLoan-bridgeTotalRepay,capitalLeftIn=netCashRequired-refiProceeds;
+  const equity=gdv-btlLoan,equityPct=gdv>0?equity/gdv*100:0;
+  const voidCost=rent*voidPct,netRent=rent-voidCost,mgmtCost=rent*mgmtPct,maintMonthly=maintenance/12,insurMonthly=insurance/12;
+  const monthlyRunning=mgmtCost+maintMonthly+insurMonthly,netMonthlyCF=netRent-btlMonthlyInt-monthlyRunning,annualCF=netMonthlyCF*12;
+  const grossYield=gdv>0?(rent*12/gdv)*100:0,netYield=gdv>0?(annualCF/gdv)*100:0,coc=capitalLeftIn>0?(annualCF/capitalLeftIn)*100:0;
+  const stressMonthly=btlLoan*0.055/12,icr=stressMonthly>0?netRent/(stressMonthly*1.25):0;
+  const bridgeLTV=purchase>0?(bridgeLoan/purchase)*100:0,refiPct=netCashRequired>0?(refiProceeds/netCashRequired)*100:0;
+  el('bridge-ltv-hint').textContent=pct(bridgeLTV)+' of purchase price';
+  el('btl-loan-hint').textContent='= '+£(btlLoan)+' loan on '+£(gdv)+' GDV';
+  setVal('kpi-capital',£(netCashRequired));
+  setVal('kpi-equity',£(equity),equity>=0?'positive':'negative');
+  el('kpi-equity-pct').textContent=pct(equityPct)+' of GDV';
+  setVal('kpi-cashflow',£(netMonthlyCF),netMonthlyCF>=0?'positive':'negative');
+  setVal('kpi-yield',pct(grossYield));
+  setVal('kpi-net-yield',pct(netYield));
+  setVal('kpi-coc',pct(coc),coc>=5?'positive':coc>=0?'':'negative');
+  setVal('kpi-icr',x(icr),icr>=1.25?'positive':icr>=1?'warning':'negative');
+  setVal('kpi-refi',£(btlLoan));
+  el('kpi-refi-ltv').textContent=pct(btlLTV*100)+' LTV of GDV';
+  const banner=el('viability-banner');
+  let vClass,vIcon,vTitle,vSub;
+  if(icr>=1.25&&netMonthlyCF>=0&&bridgeLTV<=75&&btlLTV*100<=75){vClass='green';vIcon='✅';vTitle='Deal looks viable';vSub='ICR passes stress test. Cashflow positive. LTVs within lender limits.';}
+  else if(icr>=1.0||netMonthlyCF>=-200){vClass='amber';vIcon='⚠️';vTitle='Deal has concerns — review carefully';vSub=icr<1.25?`ICR of ${x(icr)} below typical 1.25x minimum. May need specialist lender.`:`Monthly cashflow is tight at ${£(netMonthlyCF)}.`;}
+  else{vClass='red';vIcon='❌';vTitle='Deal unlikely to be fundable as modelled';vSub=`ICR of ${x(icr)} — rental income does not cover mortgage at stress rate. Adjust inputs.`;}
+  banner.className='viability-banner '+vClass;
+  el('viability-icon').textContent=vIcon;
+  el('viability-title').textContent=vTitle;
+  el('viability-sub').textContent=vSub;
+  el('stress-icr').className='stress-item '+stressClass(icr>=1.25,icr>=1.0); el('sv-icr').textContent=x(icr);
+  el('stress-ltv').className='stress-item '+stressClass(btlLTV*100<=75,btlLTV*100<=80); el('sv-ltv').textContent=pct(btlLTV*100);
+  el('stress-bridge-ltv').className='stress-item '+stressClass(bridgeLTV<=75,bridgeLTV<=80); el('sv-bridge-ltv').textContent=pct(bridgeLTV);
+  el('stress-cf').className='stress-item '+stressClass(netMonthlyCF>=100,netMonthlyCF>=0); el('sv-cf').textContent=£(netMonthlyCF)+'/mo';
+  el('stress-equity').className='stress-item '+stressClass(equity>0,equity>-5000); el('sv-equity').textContent=£(equity);
+  el('stress-recap').className='stress-item '+stressClass(refiProceeds>=0,refiProceeds>=-10000); el('sv-recap').textContent=£(refiProceeds);
+  el('o-purchase').textContent=£(purchase); el('o-sdlt').textContent=£(sdlt); el('o-legal').textContent=£(legal);
+  el('o-survey').textContent=£(survey); el('o-other').textContent=£(otherCost);
+  el('o-bridge-arr').textContent=£(bridgeFee); el('o-bridge-int').textContent=£(bridgeInterest); el('o-bridge-exit').textContent=£(bridgeExitFee);
+  el('o-refurb').textContent=£(refurb); el('o-btl-fee').textContent=£(btlFee); el('o-btl-legal').textContent=£(btlLegal);
+  el('o-total-cost').textContent=£(totalProjectCost); el('o-bridge-provided').textContent=£(bridgeLoan); el('o-net-cash').textContent=£(netCashRequired);
+  el('o-gdv').textContent=£(gdv); el('o-btl-loan').textContent=£(btlLoan); el('o-bridge-repaid').textContent='('+£(bridgeTotalRepay)+')';
+  el('o-refi-proceeds').textContent=£(refiProceeds); el('o-equity').textContent=£(equity); el('o-capital-in').textContent=£(capitalLeftIn);
+  el('o-rent').textContent=£(rent); el('o-void-cost').textContent='('+£(voidCost)+')'; el('o-net-rent').textContent=£(netRent);
+  el('o-btl-monthly').textContent='('+£(btlMonthlyInt)+')'; el('o-mgmt-cost').textContent='('+£(mgmtCost)+')';
+  el('o-maint-monthly').textContent='('+£(maintMonthly)+')'; el('o-insur-monthly').textContent='('+£(insurMonthly)+')';
+  el('o-net-cf').textContent=£(netMonthlyCF); el('o-net-cf').className='st-value '+(netMonthlyCF>=0?'positive':'negative');
+  el('o-annual-cf').textContent=£(annualCF); el('o-annual-cf').className='st-value '+(annualCF>=0?'positive':'negative');
+  buildCFTable(bridgeTerm,bridgeLoan,bridgeRateM,bridgeInterest,bridgeExitFee,btlMonthlyInt,rent,rentGrowthA,monthlyRunning,voidPct);
+  updateCharts({purchase,sdlt,legal,survey,otherCost,bridgeFee,bridgeInterest,bridgeExitFee,refurb,btlFee,btlLegal,bridgeLoan,btlLoan,btlTerm:parseInt(el('i-btl-term').value),netMonthlyCF,rent,rentGrowthA,monthlyRunning,btlMonthlyInt,voidPct});
+  state={purchase,gdv,refurb,sdlt,legal,bridgeLoan,bridgeRateM,bridgeTerm,bridgeFee,bridgeInterest,bridgeExitFee,btlLoan,btlLTV:btlLTV*100,btlRateA:btlRateA*100,btlMonthlyInt,rent,grossYield,netYield,coc,icr,equity,equityPct,netCashRequired,refiProceeds,capitalLeftIn,netMonthlyCF,annualCF,totalProjectCost,bridgeLTV};
+}
+function buildCFTable(bridgeTerm,bridgeLoan,bridgeRateM,bridgeInterest,bridgeExitFee,btlMonthlyInt,rent,rentGrowthA,monthlyRunning,voidPct) {
+  const tb=el('cf-tbody'); tb.innerHTML=''; let cum=0;
+  for(let m=1;m<=bridgeTerm+60;m++){
+    const isBridge=m<=bridgeTerm,btlMonth=m-bridgeTerm,year=Math.ceil(btlMonth/12);
+    const rentMonth=isBridge?0:rent*Math.pow(1+rentGrowthA,year-1),netRentMonth=rentMonth*(1-voidPct);
+    const bridgeIntMonth=isBridge?bridgeLoan*bridgeRateM:0,btlIntMonth=!isBridge?btlMonthlyInt:0;
+    const runningMonth=!isBridge?monthlyRunning:0,bridgeExitMonth=m===bridgeTerm?bridgeExitFee:0;
+    const net=netRentMonth-bridgeIntMonth-btlIntMonth-runningMonth-bridgeExitMonth; cum+=net;
+    if(m===1||m===bridgeTerm+1||(m>bridgeTerm&&(m-bridgeTerm)%12===1)){
+      const hr=tb.insertRow(); hr.className='phase-head';
+      hr.innerHTML=`<td colspan="8">${isBridge?'🌉 BRIDGE PERIOD — Month '+m:'🏦 BTL PERIOD — Year '+year}</td>`;
+    }
+    const tr=tb.insertRow(); tr.className=isBridge?'bridge-row':'refi-row';
+    tr.innerHTML=`<td>Month ${m}</td><td>${isBridge?'Bridge':'BTL'}</td><td>${rentMonth>0?£(rentMonth):'—'}</td><td>${bridgeIntMonth>0?'('+£(bridgeIntMonth)+')':'—'}</td><td>${btlIntMonth>0?'('+£(btlIntMonth)+')':'—'}</td><td>${runningMonth>0?'('+£(runningMonth)+')':'—'}</td><td class="${net>=0?'positive-cf':'negative-cf'}">${£(net)}</td><td class="${cum>=0?'positive-cf':'negative-cf'}">${£(cum)}</td>`;
+  }
+}
+function updateCharts(d) {
+  if(charts.borrowing) charts.borrowing.destroy();
+  charts.borrowing=new Chart(el('chart-borrowing'),{type:'bar',data:{labels:['Bridge Loan','BTL Refinance'],datasets:[{data:[d.bridgeLoan,d.btlLoan],backgroundColor:['#64748b','#27ae60'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' £'+Math.round(ctx.raw).toLocaleString('en-GB')}}},scales:{y:{ticks:{callback:v=>'£'+v.toLocaleString('en-GB')},grid:{color:'#f1f4f9'}},x:{grid:{display:false}}}}});
+  if(charts.costs) charts.costs.destroy();
+  charts.costs=new Chart(el('chart-costs'),{type:'doughnut',data:{labels:['Purchase','Refurb','Bridge Finance','SDLT','Legal/Other','Refi Costs'],datasets:[{data:[d.purchase,d.refurb,d.bridgeFee+d.bridgeInterest+d.bridgeExitFee,d.sdlt,d.legal+d.survey+d.otherCost,d.btlFee+d.btlLegal],backgroundColor:['#1a2744','#e67e22','#c0392b','#f1c40f','#2980b9','#27ae60'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:ctx=>' £'+Math.round(ctx.raw).toLocaleString('en-GB')}}}}});
+  if(charts.cashflow) charts.cashflow.destroy();
+  const labels=[],data=[];
+  for(let yr=1;yr<=5;yr++){const r=d.rent*Math.pow(1+d.rentGrowthA,yr-1)*12*(1-d.voidPct);labels.push('Year '+yr);data.push(Math.round(r-d.btlMonthlyInt*12-d.monthlyRunning*12));}
+  charts.cashflow=new Chart(el('chart-cashflow'),{type:'bar',data:{labels,datasets:[{label:'Net Annual Cashflow',data,backgroundColor:data.map(v=>v>=0?'#27ae60':'#c0392b'),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' £'+ctx.raw.toLocaleString('en-GB')}}},scales:{y:{ticks:{callback:v=>'£'+v.toLocaleString('en-GB')},grid:{color:'#f1f4f9'}},x:{grid:{display:false}}}}});
+}
+function switchTab(id,btn){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el('tab-'+id).classList.add('active');btn.classList.add('active');if(id==='cashflows')setTimeout(()=>{if(charts.cashflow)charts.cashflow.resize();},50);}
+function resetInputs(){if(!confirm('Reset all inputs to defaults?'))return;const d={'i-purchase':200000,'i-gdv':280000,'i-refurb':30000,'i-sdlt':7500,'i-legal':3000,'i-survey':1500,'i-other':1000,'i-bridge-loan':150000,'i-bridge-rate':0.85,'i-bridge-term':12,'i-bridge-fee':2,'i-bridge-exit':1,'i-btl-ltv':75,'i-btl-rate':5.5,'i-btl-fee':1500,'i-btl-legal':1000,'i-rent':1200,'i-rent-growth':3,'i-mgmt':10,'i-maintenance':1200,'i-insurance':600,'i-void':5};Object.entries(d).forEach(([id,val])=>{el(id).value=val;});recalc();}
+function openEmailModal(){const s=state;el('email-preview').innerHTML=`<h3>EAS Finance — Bridge-to-Let Deal Analysis</h3><p style="color:#64748b;font-size:0.8rem;">Prepared by EAS Finance &bull; ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p><div class="section-title">📊 Deal Summary</div><div class="mp-row"><span>Purchase Price</span><span>${£(s.purchase)}</span></div><div class="mp-row"><span>GDV</span><span>${£(s.gdv)}</span></div><div class="mp-row"><span>Total Project Cost</span><span><strong>${£(s.totalProjectCost)}</strong></span></div><div class="mp-row"><span>Net Cash Required</span><span><strong>${£(s.netCashRequired)}</strong></span></div><div class="section-title">🌉 Bridge Finance</div><div class="mp-row"><span>Bridge Loan</span><span>${£(s.bridgeLoan)} (${pct(s.bridgeLTV)} LTV)</span></div><div class="mp-row"><span>Total Bridge Interest</span><span>${£(s.bridgeInterest)}</span></div><div class="section-title">🏦 BTL Refinance</div><div class="mp-row"><span>BTL Loan</span><span>${£(s.btlLoan)} (${pct(s.btlLTV)} LTV)</span></div><div class="mp-row"><span>Capital Left In</span><span><strong>${£(s.capitalLeftIn)}</strong></span></div><div class="section-title">💷 Rental Performance</div><div class="mp-row"><span>Monthly Net Cashflow</span><span><strong>${£(s.netMonthlyCF)}</strong></span></div><div class="mp-row"><span>Gross Yield</span><span>${pct(s.grossYield)}</span></div><div class="mp-row"><span>Cash-on-Cash Return</span><span>${pct(s.coc)}</span></div><div class="section-title">✅ Deal Health</div><div class="mp-row"><span>ICR (stress 5.5%)</span><span>${x(s.icr)} ${s.icr>=1.25?'✅ Pass':s.icr>=1.0?'⚠️ Marginal':'❌ Fail'}</span></div><div class="mp-row"><span>Day-1 Equity</span><span>${£(s.equity)} (${pct(s.equityPct)} of GDV)</span></div>`;el('email-modal').classList.add('open');}
+function closeEmailModal(){el('email-modal').classList.remove('open');}
+function sendEmail(){const toEmail=el('client-email').value||'',clientName=el('client-name').value||'Client',s=state;const subject=encodeURIComponent(`EAS Finance — Bridge-to-Let Analysis: ${£(s.purchase)} Purchase`);const body=encodeURIComponent(`Dear ${clientName},\n\nPlease find your Bridge-to-Let deal analysis below.\n\n━━━ DEAL SUMMARY ━━━\nPurchase Price: ${£(s.purchase)}\nGDV: ${£(s.gdv)}\nTotal Project Cost: ${£(s.totalProjectCost)}\nNet Cash Required: ${£(s.netCashRequired)}\n\n━━━ BRIDGE FINANCE ━━━\nLoan: ${£(s.bridgeLoan)} (${pct(s.bridgeLTV)} LTV)\nRate: ${(s.bridgeRateM*100).toFixed(2)}%/month\nTotal Interest: ${£(s.bridgeInterest)}\n\n━━━ BTL REFINANCE ━━━\nBTL Loan: ${£(s.btlLoan)} (${pct(s.btlLTV)} LTV)\nRate: ${s.btlRateA.toFixed(2)}% p.a.\nCapital Left In: ${£(s.capitalLeftIn)}\n\n━━━ RENTAL PERFORMANCE ━━━\nMonthly Net Cashflow: ${£(s.netMonthlyCF)}\nGross Yield: ${pct(s.grossYield)}\nCash-on-Cash Return: ${pct(s.coc)}\n\n━━━ DEAL HEALTH ━━━\nICR (stress 5.5%): ${x(s.icr)} ${s.icr>=1.25?'PASS':s.icr>=1.0?'MARGINAL':'FAIL'}\nDay-1 Equity: ${£(s.equity)} (${pct(s.equityPct)} of GDV)\n\nThis analysis is for illustration only and does not constitute financial advice.\nEAS Finance — Specialist Bridge & BTL Mortgage Brokers`);window.location.href=`mailto:${toEmail}?subject=${subject}&body=${body}`;}
+function copyEmail(){const s=state;const text=`EAS Finance — Bridge-to-Let Analysis\nPurchase: ${£(s.purchase)} | GDV: ${£(s.gdv)} | Cash Required: ${£(s.netCashRequired)}\nBridge: ${£(s.bridgeLoan)} @ ${(s.bridgeRateM*100).toFixed(2)}%/mo | BTL Refi: ${£(s.btlLoan)} @ ${s.btlRateA.toFixed(2)}%\nNet Monthly CF: ${£(s.netMonthlyCF)} | ICR: ${x(s.icr)} | Gross Yield: ${pct(s.grossYield)} | CoC: ${pct(s.coc)}`;navigator.clipboard.writeText(text).then(()=>alert('Summary copied to clipboard!'));}
+recalc();
+</script>
+</body>
+</html>
