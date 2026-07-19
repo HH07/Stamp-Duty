@@ -201,7 +201,7 @@ var D = {
         fb:'Property exceeds £500,000 — first-time buyer relief does <strong>not</strong> apply. Standard rates used.'},
       additional:{lbl:'Additional / Buy-to-Let',note:'<strong>5% surcharge</strong> on all bands from £0 (raised from 3% in October 2024). Applies to second homes, BTL and holiday lets. Surcharge can be reclaimed if previous main residence is sold within 36 months.',nc:'amb',
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:5},{l:'£125,001 – £250,000',f:125000,t:250000,r:7},{l:'£250,001 – £925,000',f:250000,t:925000,r:10},{l:'£925,001 – £1,500,000',f:925000,t:1500000,r:15},{l:'Over £1,500,000',f:1500000,t:null,r:17}]},
-      company:{lbl:'Company Purchase',note:'<strong>Under £500,000:</strong> higher residential rates apply (5% surcharge bands). <strong>Over £500,000:</strong> the value above £500,000 is taxed at a flat 17% — the first £500,000 still uses the surcharge bands. A non-UK company (or UK company controlled by non-residents) also pays the 2% non-resident surcharge. Annual Tax on Enveloped Dwellings (ATED) may apply annually on properties over £500,000.',nc:'red',
+      company:{lbl:'Company Purchase',note:'<strong>Under £500,000:</strong> higher residential rates apply (5% surcharge bands). <strong>Over £500,000:</strong> a flat 17% applies to the <strong>entire</strong> purchase price (not just the amount above £500,000), replacing the surcharge bands completely — subject to available reliefs (e.g. property rental business, development trade). A non-UK company (or UK company controlled by non-residents) also pays the 2% non-resident surcharge on top. Annual Tax on Enveloped Dwellings (ATED) may apply annually on properties over £500,000.',nc:'red',
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:5},{l:'£125,001 – £250,000',f:125000,t:250000,r:7},{l:'£250,001 – £500,000',f:250000,t:500000,r:10},{l:'£500,001 and above',f:500000,t:null,r:17}]},
       overseas:{lbl:'Overseas Buyer — first property',note:'Non-UK residents (fewer than 183 days in UK in 12 months before purchase) pay a <strong>2% surcharge on top of standard rates</strong>. Applies to freehold and leasehold. The surcharge is shown as a separate line on top of standard band totals.',nc:'blu',sur:2,
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:0},{l:'£125,001 – £250,000',f:125000,t:250000,r:2},{l:'£250,001 – £925,000',f:250000,t:925000,r:5},{l:'£925,001 – £1,500,000',f:925000,t:1500000,r:10},{l:'Over £1,500,000',f:1500000,t:null,r:12}]},
@@ -212,7 +212,7 @@ var D = {
       {i:'📅',t:'Paid within <strong>14 days</strong> of completion to HMRC. Late payment triggers penalties and interest.'},
       {i:'🔑',t:'First-time buyers: 0% up to £300,000; 5% on £300k–£500k. <strong>No relief above £500,000</strong> — standard rates apply to the entire price.'},
       {i:'🏢',t:'Additional property / BTL: <strong>5% surcharge</strong> on all bands from £0. Raised from 3% in October 2024. Refundable within 36 months if previous main home is sold.'},
-      {i:'🏙️',t:'Company purchase: higher residential rates (5% surcharge) on first £500,000; <strong>flat 17% on the value above £500,000</strong>. A non-UK company also faces the 2% non-resident surcharge. ATED may apply annually.'},
+      {i:'🏙️',t:'Company purchase: higher residential rates (5% surcharge) below £500,000; once price exceeds £500,000, a <strong>flat 17% applies to the whole price</strong> (Sch 4A FA 2003), not just the excess — reliefs may reduce or remove this. A non-UK company also faces the 2% non-resident surcharge. ATED may apply annually.'},
       {i:'🌍',t:'Non-UK residents: <strong>+2% surcharge</strong> on top of all applicable rates. Overseas buyer + additional property = standard + 5% + 2% = up to 19% effective rate on highest band.'},
       {i:'🔄',t:'Additional property surcharge refundable if previous main residence sold within <strong>36 months</strong>. Claim within 12 months of the sale date.'},
       {i:'🏗️',t:'Mixed-use / commercial property taxed at <strong>non-residential rates</strong> — often significantly lower than residential rates.'}
@@ -297,6 +297,18 @@ function calcTax(price,n,bt){
     var fb=cfg.fb||'Standard rates applied.';
     cfg=D[n].buyers['standard'];
     res.note=fb; res.nc='amb';
+  }
+  // England corporate 17% flat-rate charge (Sch 4A FA 2003). Once the price exceeds
+  // £500,000 this applies to the ENTIRE consideration, not just the excess, and it
+  // replaces the marginal surcharge bands entirely (subject to available reliefs).
+  if(bt==='company'&&n==='england'&&price>500000){
+    var flat=price*0.17;
+    res.tot=flat;
+    res.rows=[{b:{l:'Flat 17% rate on full consideration (Sch 4A FA 2003)',r:17},tax:flat,tab:price}];
+    res.note='Price exceeds £500,000 \u2014 the 17% rate applies to the <strong>entire</strong> purchase price, not just the amount above £500,000, and replaces the standard surcharge bands entirely. Reliefs (e.g. property rental business, development trade, qualifying housing co-operative) may reduce or remove this charge \u2014 always confirm with a solicitor before relying on it.';
+    res.nc='red';
+    if(cfg.sur){var s=price*cfg.sur/100; res.tot+=s; res.sur={rate:cfg.sur,amt:s};}
+    return res;
   }
   var m=marginal(price,cfg.bands);
   res.tot=m.tot; res.rows=m.rows;
