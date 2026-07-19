@@ -158,7 +158,7 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
 </div>
 
 <div class="assumption-bar">
-  <strong>Assumptions:</strong> Bridge interest is retained; Refinance is interest-only; Rental growth fixed at 3% p.a. for projections; ICR stress tested at 5.5%; Lender criteria vary. This tool is for illustration only — not financial advice.
+  <strong>Assumptions:</strong> Bridge interest is retained and repaid at redemption (not a Day-1 cash cost); BTL arrangement fee and legal are due at refinance completion, not Day 1. Refinance is interest-only; Rental growth fixed at 3% p.a. for projections; ICR stress tested at 5.5% with a 1.25x cover requirement; Lender criteria vary. This tool is for illustration only — not financial advice.
 </div>
 
 <div id="tab-dashboard" class="tab-panel active">
@@ -176,7 +176,7 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
       <div class="kpi-card green"><div class="kpi-label">Day-1 Equity (GDV)</div><div class="kpi-value positive" id="kpi-equity">£0</div><div class="kpi-sub" id="kpi-equity-pct">0% of GDV</div></div>
       <div class="kpi-card blue"><div class="kpi-label">Monthly Net Cashflow</div><div class="kpi-value" id="kpi-cashflow">£0</div><div class="kpi-sub">After BTL mortgage</div></div>
       <div class="kpi-card orange"><div class="kpi-label">Gross Yield</div><div class="kpi-value" id="kpi-yield">0.0%</div><div class="kpi-sub">Based on GDV</div></div>
-      <div class="kpi-card amber"><div class="kpi-label">Net Yield</div><div class="kpi-value" id="kpi-net-yield">0.0%</div><div class="kpi-sub">After costs</div></div>
+      <div class="kpi-card amber"><div class="kpi-label">Net Yield</div><div class="kpi-value" id="kpi-net-yield">0.0%</div><div class="kpi-sub">Rent minus running costs, pre-finance</div></div>
       <div class="kpi-card green"><div class="kpi-label">Cash-on-Cash Return</div><div class="kpi-value positive" id="kpi-coc">0.0%</div><div class="kpi-sub">Annual / capital in</div></div>
       <div class="kpi-card navy"><div class="kpi-label">ICR (Stress 5.5%)</div><div class="kpi-value" id="kpi-icr">0.0x</div><div class="kpi-sub">Min. 1.25x required</div></div>
       <div class="kpi-card blue"><div class="kpi-label">BTL Refinance Amount</div><div class="kpi-value" id="kpi-refi">£0</div><div class="kpi-sub" id="kpi-refi-ltv">0% LTV of GDV</div></div>
@@ -190,11 +190,11 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
     <div class="stress-card">
       <h3>🔬 Lender Stress Tests &amp; Deal Health</h3>
       <div class="stress-grid">
-        <div class="stress-item" id="stress-icr"><div class="stress-name">Interest Cover Ratio</div><div class="stress-val" id="sv-icr">—</div><div class="stress-note">Rent ÷ (Mortgage × 1.25 stress). Min 1.25x</div></div>
+        <div class="stress-item" id="stress-icr"><div class="stress-name">Interest Cover Ratio</div><div class="stress-val" id="sv-icr">—</div><div class="stress-note">Net rent ÷ mortgage at 5.5% stress. Min 1.25x</div></div>
         <div class="stress-item" id="stress-ltv"><div class="stress-name">BTL LTV</div><div class="stress-val" id="sv-ltv">—</div><div class="stress-note">Max 75% typical high-st lender</div></div>
         <div class="stress-item" id="stress-bridge-ltv"><div class="stress-name">Bridge LTV</div><div class="stress-val" id="sv-bridge-ltv">—</div><div class="stress-note">Max 75% of purchase / 70% GDV</div></div>
         <div class="stress-item" id="stress-cf"><div class="stress-name">Monthly Cashflow</div><div class="stress-val" id="sv-cf">—</div><div class="stress-note">Rent minus BTL interest &amp; costs</div></div>
-        <div class="stress-item" id="stress-equity"><div class="stress-name">Equity Created</div><div class="stress-val" id="sv-equity">—</div><div class="stress-note">GDV minus total cost stack</div></div>
+        <div class="stress-item" id="stress-equity"><div class="stress-name">Equity Created</div><div class="stress-val" id="sv-equity">—</div><div class="stress-note">GDV minus BTL mortgage balance</div></div>
         <div class="stress-item" id="stress-recap"><div class="stress-name">Capital Recaptured</div><div class="stress-val" id="sv-recap">—</div><div class="stress-note">Refi proceeds vs total spend</div></div>
       </div>
     </div>
@@ -265,21 +265,23 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
       <div class="st-row"><span class="st-label">Survey / Valuation</span><span class="st-value" id="o-survey">£0</span></div>
       <div class="st-row"><span class="st-label">Other Costs</span><span class="st-value" id="o-other">£0</span></div>
 
-      <div class="st-row section-head"><span>Finance Costs (Bridge)</span><span></span></div>
-      <div class="st-row"><span class="st-label">Bridge Arrangement Fee</span><span class="st-value" id="o-bridge-arr">£0</span></div>
-      <div class="st-row"><span class="st-label">Bridge Rolled Interest</span><span class="st-value" id="o-bridge-int">£0</span></div>
-      <div class="st-row"><span class="st-label">Bridge Exit Fee</span><span class="st-value" id="o-bridge-exit">£0</span></div>
-
       <div class="st-row section-head"><span>Refurbishment</span><span></span></div>
       <div class="st-row"><span class="st-label">Refurb / Renovation</span><span class="st-value" id="o-refurb">£0</span></div>
 
-      <div class="st-row section-head"><span>Refinance Costs</span><span></span></div>
+      <div class="st-row section-head"><span>Bridge Arrangement (Day-1)</span><span></span></div>
+      <div class="st-row"><span class="st-label">Bridge Arrangement Fee</span><span class="st-value" id="o-bridge-arr">£0</span></div>
+
+      <div class="st-row total"><span class="st-label">DAY-1 COMPLETION COST</span><span class="st-value" id="o-day1-cost">£0</span></div>
+      <div class="st-row total"><span class="st-label">Bridge Loan Provided</span><span class="st-value positive" id="o-bridge-provided">£0</span></div>
+      <div class="st-row total" style="background:#1a2744; color:white;"><span style="color:white; font-weight:700;">NET CASH REQUIRED (DAY 1)</span><span class="st-value" style="color:#2ecc71; font-weight:700;" id="o-net-cash">£0</span></div>
+
+      <div class="st-row section-head"><span>Deferred — Repaid at Redemption / Refinance (not Day-1 cash)</span><span></span></div>
+      <div class="st-row"><span class="st-label">Bridge Rolled Interest</span><span class="st-value" id="o-bridge-int">£0</span></div>
+      <div class="st-row"><span class="st-label">Bridge Exit Fee</span><span class="st-value" id="o-bridge-exit">£0</span></div>
       <div class="st-row"><span class="st-label">BTL Arrangement Fee</span><span class="st-value" id="o-btl-fee">£0</span></div>
       <div class="st-row"><span class="st-label">BTL Legal Fees</span><span class="st-value" id="o-btl-legal">£0</span></div>
 
-      <div class="st-row total"><span class="st-label">TOTAL PROJECT COST</span><span class="st-value" id="o-total-cost">£0</span></div>
-      <div class="st-row total"><span class="st-label">Bridge Loan Provided</span><span class="st-value positive" id="o-bridge-provided">£0</span></div>
-      <div class="st-row total" style="background:#1a2744; color:white;"><span style="color:white; font-weight:700;">NET CASH REQUIRED (DAY 1)</span><span class="st-value" style="color:#2ecc71; font-weight:700;" id="o-net-cash">£0</span></div>
+      <div class="st-row total"><span class="st-label">TOTAL PROJECT COST (all-in)</span><span class="st-value" id="o-total-cost">£0</span></div>
     </div>
 
     <div class="summary-table" style="margin-bottom:18px;">
@@ -287,6 +289,7 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
       <div class="st-row"><span class="st-label">Gross Development Value (GDV)</span><span class="st-value" id="o-gdv">£0</span></div>
       <div class="st-row"><span class="st-label">BTL Loan (LTV × GDV)</span><span class="st-value" id="o-btl-loan">£0</span></div>
       <div class="st-row"><span class="st-label">Bridge Loan Repaid (incl. interest &amp; fees)</span><span class="st-value negative" id="o-bridge-repaid">£0</span></div>
+      <div class="st-row"><span class="st-label">BTL Arrangement Fee &amp; Legal</span><span class="st-value negative" id="o-btl-costs">£0</span></div>
       <div class="st-row"><span class="st-label">Net Refinance Proceeds</span><span class="st-value positive" id="o-refi-proceeds">£0</span></div>
       <div class="st-row total"><span class="st-label">Equity in Property Post-Refi</span><span class="st-value positive" id="o-equity">£0</span></div>
       <div class="st-row total"><span class="st-label">Capital Left In (after refi)</span><span class="st-value" id="o-capital-in">£0</span></div>
@@ -492,8 +495,20 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
     const rent = num('i-rent'), rentGrowthA = num('i-rent-growth') / 100, mgmtPct = num('i-mgmt') / 100;
     const maintenance = num('i-maintenance'), insurance = num('i-insurance'), voidPct = num('i-void') / 100;
 
-    const totalProjectCost = purchase + sdlt + legal + survey + otherCost + bridgeFee + bridgeInterest + bridgeExitFee + refurb + btlFee + btlLegal;
-    const netCashRequired = totalProjectCost - bridgeLoan, refiProceeds = btlLoan - bridgeTotalRepay, capitalLeftIn = netCashRequired - refiProceeds;
+    // Day-1 costs: money needed to complete the bridge purchase. Bridge interest is retained
+    // (rolled into the facility, repaid at redemption) and the bridge exit fee is only due on
+    // redemption, so neither is a Day-1 cash cost. BTL arrangement fee and legal are refinance-stage
+    // costs, due when the BTL mortgage completes, not at Day 1.
+    const dayOneCost = purchase + sdlt + legal + survey + otherCost + refurb + bridgeFee;
+    const netCashRequired = dayOneCost - bridgeLoan;
+
+    // Refinance completion: the BTL loan redeems the bridge (loan + rolled interest + exit fee) and
+    // covers the BTL arrangement fee and legal costs; anything left over is proceeds back to the client.
+    const refiProceeds = btlLoan - bridgeTotalRepay - btlFee - btlLegal;
+    const capitalLeftIn = netCashRequired - refiProceeds;
+
+    // Total project cost: full all-in cost of the deal, for the cost-stack display and chart only.
+    const totalProjectCost = dayOneCost + bridgeInterest + bridgeExitFee + btlFee + btlLegal;
 
     const equity = gdv - btlLoan, equityPct = gdv > 0 ? equity / gdv * 100 : 0;
 
@@ -502,9 +517,13 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
     const monthlyRunning = mgmtCost + maintMonthly + insurMonthly;
 
     const netMonthlyCF = netRent - btlMonthlyInt - monthlyRunning, annualCF = netMonthlyCF * 12;
-    const grossYield = gdv > 0 ? (rent * 12 / gdv) * 100 : 0, netYield = gdv > 0 ? (annualCF / gdv) * 100 : 0, coc = capitalLeftIn > 0 ? (annualCF / capitalLeftIn) * 100 : 0;
+    // Net yield: net operating income (rent less void and running costs, BEFORE mortgage interest)
+    // over GDV — the standard unlevered measure. Cash-on-Cash Return (below) is the levered,
+    // post-finance view, calculated against capital actually left in the deal.
+    const noiAnnual = (netRent - monthlyRunning) * 12;
+    const grossYield = gdv > 0 ? (rent * 12 / gdv) * 100 : 0, netYield = gdv > 0 ? (noiAnnual / gdv) * 100 : 0, coc = capitalLeftIn > 0 ? (annualCF / capitalLeftIn) * 100 : 0;
 
-    const stressMonthly = btlLoan * 0.055 / 12, icr = stressMonthly > 0 ? netRent / (stressMonthly * 1.25) : 0;
+    const stressMonthly = btlLoan * 0.055 / 12, icr = stressMonthly > 0 ? netRent / stressMonthly : 0;
     const bridgeLTV = purchase > 0 ? (bridgeLoan / purchase) * 100 : 0;
 
     el('bridge-ltv-hint').textContent = pct(bridgeLTV) + ' of purchase price';
@@ -547,8 +566,10 @@ input:focus, select:focus { outline: none; border-color: var(--navy); background
     el('o-survey').textContent = gbp(survey); el('o-other').textContent = gbp(otherCost);
     el('o-bridge-arr').textContent = gbp(bridgeFee); el('o-bridge-int').textContent = gbp(bridgeInterest); el('o-bridge-exit').textContent = gbp(bridgeExitFee);
     el('o-refurb').textContent = gbp(refurb); el('o-btl-fee').textContent = gbp(btlFee); el('o-btl-legal').textContent = gbp(btlLegal);
+    el('o-day1-cost').textContent = gbp(dayOneCost);
     el('o-total-cost').textContent = gbp(totalProjectCost); el('o-bridge-provided').textContent = gbp(bridgeLoan); el('o-net-cash').textContent = gbp(netCashRequired);
     el('o-gdv').textContent = gbp(gdv); el('o-btl-loan').textContent = gbp(btlLoan); el('o-bridge-repaid').textContent = '(' + gbp(bridgeTotalRepay) + ')';
+    el('o-btl-costs').textContent = '(' + gbp(btlFee + btlLegal) + ')';
     el('o-refi-proceeds').textContent = gbp(refiProceeds); el('o-equity').textContent = gbp(equity); el('o-capital-in').textContent = gbp(capitalLeftIn);
     el('o-rent').textContent = gbp(rent); el('o-void-cost').textContent = '(' + gbp(voidCost) + ')'; el('o-net-rent').textContent = gbp(netRent);
     el('o-btl-monthly').textContent = '(' + gbp(btlMonthlyInt) + ')'; el('o-mgmt-cost').textContent = '(' + gbp(mgmtCost) + ')';
