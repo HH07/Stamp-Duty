@@ -36,7 +36,7 @@ body{font-family:var(--font);background:var(--g50);color:var(--g800)}
 .nbt{font-size:.98rem;font-weight:700;color:var(--navy)}
 .nbs{font-size:.78rem;color:var(--g600);margin-top:2px}
 /* SECTION LABEL */
-.slbl{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g400);margin-bottom:10px}
+.slbl{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g400);margin-bottom:10px}
 /* PILLS */
 .pills{display:flex;gap:7px;flex-wrap:wrap}
 .pill{padding:8px 16px;border-radius:30px;border:2px solid var(--g200);font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer;background:#fff;color:var(--g600);transition:all .18s}
@@ -47,9 +47,19 @@ body{font-family:var(--font);background:var(--g50);color:var(--g800)}
 .bnote.amb{background:#fffbeb;border-color:#f59e0b;color:#92400e}
 .bnote.red{background:#fef2f2;border-color:#ef4444;color:#7f1d1d}
 .bnote.blu{background:#eff6ff;border-color:#3b82f6;color:#1e3a5f}
+/* PURCHASE OPTIONS */
+select{max-width:100%;padding:8px 10px;border:1px solid var(--g200);border-radius:var(--rs);background:#fff;color:var(--navy);font:inherit}
+.options{margin-top:12px;font-size:.84rem;color:var(--navy)}
+.options label{display:block;margin:8px 0}
+.options input[type=checkbox]{margin-right:5px}
+.options a{color:inherit;text-decoration:underline}
+.field-help{margin-top:8px;font-size:.8rem;color:var(--g600);line-height:1.5}
+.field-error{margin-top:8px;font-size:.8rem;color:#991b1b}
+.field-error:empty{display:none}
+[hidden]{display:none!important}
 /* PRICE INPUT */
 .prow{display:flex;align-items:center;gap:11px}
-.pwrap{position:relative;flex:1}
+.pwrap{position:relative;flex:1;width:100%;min-width:0}
 .ppfx{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:1.05rem;font-weight:700;color:var(--g400)}
 input[type=number]{width:100%;padding:13px 13px 13px 28px;border:2px solid var(--g200);border-radius:var(--rs);font-family:var(--font);font-size:1.25rem;font-weight:700;color:var(--navy);background:var(--g50);-moz-appearance:textfield;transition:border-color .15s}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
@@ -123,13 +133,13 @@ input[type=number]:focus{outline:none;border-color:var(--navy);background:#fff}
 
 <div class="hdr">
   <h1>EAS Finance &nbsp;|&nbsp; UK Property Tax Calculator</h1>
-  <p>SDLT &bull; LBTT &bull; LTT &nbsp;&mdash;&nbsp; Individuals, Companies &amp; Overseas Buyers &nbsp;&mdash;&nbsp; Rates current April 2025</p>
+  <p>SDLT &bull; LBTT &bull; LTT &nbsp;&mdash;&nbsp; Individuals, Companies &amp; Overseas Buyers</p>
 </div>
 
 <div class="nbar">
-  <button class="nbtn eng on" onclick="setN('england',this)">&#x1F3F4; England &amp; N.Ireland</button>
-  <button class="nbtn sco" onclick="setN('scotland',this)">&#x1F3F4; Scotland</button>
-  <button class="nbtn wal" onclick="setN('wales',this)">&#x1F3F4; Wales</button>
+  <button class="nbtn eng on" aria-pressed="true" onclick="setN('england',this)">&#x1F3F4; England &amp; N.Ireland</button>
+  <button class="nbtn sco" aria-pressed="false" onclick="setN('scotland',this)">&#x1F3F4; Scotland</button>
+  <button class="nbtn wal" aria-pressed="false" onclick="setN('wales',this)">&#x1F3F4; Wales</button>
 </div>
 
 <div class="wrap">
@@ -140,32 +150,61 @@ input[type=number]:focus{outline:none;border-color:var(--navy);background:#fff}
   </div>
 
   <div class="card">
-    <div class="slbl">Buyer Type</div>
-    <div class="pills">
-      <button class="pill on" id="p-standard"      onclick="setB('standard',this)">&#x1F3E0; Standard Buyer</button>
-      <button class="pill"    id="p-ftb"           onclick="setB('ftb',this)">&#x1F511; First-Time Buyer</button>
-      <button class="pill"    id="p-additional"    onclick="setB('additional',this)">&#x1F3E2; Additional / BTL</button>
-      <button class="pill"    id="p-company"       onclick="setB('company',this)">&#x1F4BC; Company Purchase</button>
-      <button class="pill"    id="p-overseas"      onclick="setB('overseas',this)">&#x1F30D; Overseas (first property)</button>
-      <button class="pill"    id="p-overseas_add"  onclick="setB('overseas_add',this)">&#x1F30D;&#x2795; Overseas + Additional</button>
+    <label class="slbl" for="property-type">Property type</label>
+    <select id="property-type" onchange="setPropertyType()">
+      <option value="residential">Residential</option>
+      <option value="commercial">Commercial / non-residential</option>
+      <option value="mixed">Mixed-use</option>
+    </select>
+    <p class="field-help">Estimates for a single freehold purchase at current rates. For leasehold transactions, check the separate rules on premiums and rent.</p>
+    <div class="options" id="mixed-ads-options" hidden>
+      <label for="mixed-ads">Does Scotland’s Additional Dwelling Supplement (ADS) apply to the dwelling?</label>
+      <select id="mixed-ads" onchange="calc()">
+        <option value="">Select an option</option>
+        <option value="no">No</option>
+        <option value="yes">Yes</option>
+      </select>
+      <p class="field-help">See <a href="https://revenue.scot/taxes/land-buildings-transaction-tax/lbtt-legislation-guidance/additional-dwelling-supplement-ads-technical/ads-rules-particular-transactions-buyers">Revenue Scotland’s ADS guidance</a> for mixed purchases and transactions with multiple dwellings.</p>
+      <div id="mixed-price-option" hidden>
+        <label for="mixed-price">Dwelling’s share of the purchase price (£)</label>
+        <input type="number" id="mixed-price" min="0" step="0.01" oninput="autoCalc()">
+        <p class="field-help">Enter a fair allocation to the dwelling in a purchase with one dwelling.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="buyer-card">
+    <div class="slbl" id="buyer-label">Buyer Type</div>
+    <div class="pills" role="group" aria-labelledby="buyer-label">
+      <button class="pill on" id="p-standard" aria-pressed="true"      onclick="setB('standard',this)">&#x1F3E0; Standard Buyer</button>
+      <button class="pill"    id="p-ftb" aria-pressed="false"           onclick="setB('ftb',this)">&#x1F511; First-Time Buyer</button>
+      <button class="pill"    id="p-additional" aria-pressed="false"    onclick="setB('additional',this)">&#x1F3E2; Additional / BTL</button>
+      <button class="pill"    id="p-company" aria-pressed="false"       onclick="setB('company',this)">&#x1F4BC; Company Purchase</button>
+      <button class="pill"    id="p-overseas" aria-pressed="false"      onclick="setB('overseas',this)">&#x1F30D; Overseas (first property)</button>
+      <button class="pill"    id="p-overseas_add" aria-pressed="false"  onclick="setB('overseas_add',this)">&#x1F30D;&#x2795; Overseas + Additional</button>
     </div>
     <div class="bnote" id="bnote"></div>
+    <div class="options" id="company-options" hidden>
+      <label id="company-relief-option" hidden><input type="checkbox" id="company-relief" onchange="calc()"> The company qualifies for relief from the 17% charge, for example through a qualifying property rental business.</label>
+      <label><input type="checkbox" id="company-nonresident" onchange="calc()"> The company is subject to the 2% non-resident SDLT surcharge.</label>
+    </div>
   </div>
 
   <div class="card">
-    <div class="slbl">Property Purchase Price</div>
+    <label class="slbl" for="price">Property Purchase Price</label>
     <div class="prow">
       <div class="pwrap"><span class="ppfx">&#163;</span>
-        <input type="number" id="price" value="300000" min="0" step="1000" oninput="autoCalc()">
+        <input type="number" id="price" value="300000" min="0.01" step="0.01" oninput="autoCalc()">
       </div>
       <button class="cbtn" onclick="calc()">Calculate Tax</button>
     </div>
+    <p id="calc-error" class="field-error" role="status"></p>
   </div>
 
   <div class="rcard" id="rcard">
     <div class="rhdr" id="rhdr">
       <div class="rtitle"><h2 id="rtname"></h2><div class="rsub" id="rsub"></div></div>
-      <div class="ramt"><div class="big" id="rtot">&#163;0</div><div class="sub">Total tax due</div></div>
+      <div class="ramt"><div class="big" id="rtot" aria-live="polite">&#163;0</div><div class="sub">Total tax due</div></div>
     </div>
     <table class="bt">
       <thead><tr><th>Band / Component</th><th>Rate</th><th>Taxable Amount</th><th>Tax</th></tr></thead>
@@ -175,7 +214,7 @@ input[type=number]:focus{outline:none;border-color:var(--navy);background:#fff}
   </div>
 
   <div class="card" id="comp-card" style="display:none;padding:0;overflow:hidden">
-    <div class="chead">&#x1F4CA; How does this compare across the UK? (standard buyer, same price)</div>
+    <div class="chead" id="comp-heading"></div>
     <div class="cgrid" id="cgrid"></div>
   </div>
 
@@ -184,7 +223,7 @@ input[type=number]:focus{outline:none;border-color:var(--navy);background:#fff}
     <div id="notes"></div>
   </div>
 
-  <div class="disc">Rates current as of April 2025. For illustration purposes only &mdash; not financial or tax advice. Company and overseas buyer rules involve significant complexity; always confirm liability with a qualified solicitor or tax adviser before proceeding. EAS Finance Ltd.</div>
+  <div class="disc">Figures are estimates rounded to the nearest pound. Company and overseas buyer rules involve significant complexity; always confirm liability with a qualified solicitor or tax adviser before proceeding. EAS Finance Ltd.</div>
 </div>
 
 <script>
@@ -192,27 +231,27 @@ input[type=number]:focus{outline:none;border-color:var(--navy);background:#fff}
 var D = {
   england:{
     name:'England & Northern Ireland', tax:'Stamp Duty Land Tax (SDLT)', short:'SDLT', cls:'eng', dl:'14 days',
-    alert:'<strong>Recent changes:</strong> (1) <strong>April 2025</strong>: nil-rate band reverted to £125,000; FTB relief cut to £300k max (no relief above £500k). (2) <strong>October 2024</strong>: additional property surcharge raised to 5%. Company flat rate raised to 17% on value above £500k. (3) <strong>April 2021</strong>: 2% non-resident surcharge introduced.',
+    alert:'<strong>Recent changes:</strong> (1) <strong>April 2025</strong>: nil-rate band reverted to £125,000; FTB relief cut to £300k max (no relief above £500k). (2) <strong>October 2024</strong>: additional property surcharge raised to 5%. The flat company rate rose to 17% for certain purchases over £500,000. (3) <strong>April 2021</strong>: 2% non-resident surcharge introduced.',
     buyers:{
       standard:{lbl:'Standard Buyer',note:null,nc:null,
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:0},{l:'£125,001 – £250,000',f:125000,t:250000,r:2},{l:'£250,001 – £925,000',f:250000,t:925000,r:5},{l:'£925,001 – £1,500,000',f:925000,t:1500000,r:10},{l:'Over £1,500,000',f:1500000,t:null,r:12}]},
-      ftb:{lbl:'First-Time Buyer',maxP:500000,note:'Relief applies where ALL buyers are first-time buyers and purchase price is <strong>£500,000 or less</strong>. Above £500,000, no relief — standard rates apply to the full price.',nc:'amb',
+      ftb:{lbl:'First-Time Buyer',maxP:500000,note:'Relief applies if all buyers are first-time buyers, will occupy the property as their main home and the purchase price is <strong>£500,000 or less</strong>. Above £500,000, no relief — standard rates apply to the full price.',nc:'amb',
         bands:[{l:'£0 – £300,000',f:0,t:300000,r:0},{l:'£300,001 – £500,000',f:300000,t:500000,r:5}],
         fb:'Property exceeds £500,000 — first-time buyer relief does <strong>not</strong> apply. Standard rates used.'},
-      additional:{lbl:'Additional / Buy-to-Let',note:'<strong>5% surcharge</strong> on all bands from £0 (raised from 3% in October 2024). Applies to second homes, BTL and holiday lets. Surcharge can be reclaimed if previous main residence is sold within 36 months.',nc:'amb',
+      additional:{lbl:'Additional / Buy-to-Let',note:'When the higher rates apply on purchases of £40,000 or more, the <strong>5% supplement</strong> is charged from the first pound. A refund may be available after selling a previous main home.',nc:'amb',
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:5},{l:'£125,001 – £250,000',f:125000,t:250000,r:7},{l:'£250,001 – £925,000',f:250000,t:925000,r:10},{l:'£925,001 – £1,500,000',f:925000,t:1500000,r:15},{l:'Over £1,500,000',f:1500000,t:null,r:17}]},
-      company:{lbl:'Company Purchase',note:'<strong>Under £500,000:</strong> higher residential rates apply (5% surcharge bands). <strong>Over £500,000:</strong> a flat 17% applies to the <strong>entire</strong> purchase price (not just the amount above £500,000), replacing the surcharge bands completely — subject to available reliefs (e.g. property rental business, development trade). A non-UK company (or UK company controlled by non-residents) also pays the 2% non-resident surcharge on top. Annual Tax on Enveloped Dwellings (ATED) may apply annually on properties over £500,000.',nc:'red',
-        bands:[{l:'£0 – £125,000',f:0,t:125000,r:5},{l:'£125,001 – £250,000',f:125000,t:250000,r:7},{l:'£250,001 – £500,000',f:250000,t:500000,r:10},{l:'£500,001 and above',f:500000,t:null,r:17}]},
-      overseas:{lbl:'Overseas Buyer — first property',note:'Non-UK residents (fewer than 183 days in UK in 12 months before purchase) pay a <strong>2% surcharge on top of standard rates</strong>. Applies to freehold and leasehold. The surcharge is shown as a separate line on top of standard band totals.',nc:'blu',sur:2,
+      company:{lbl:'Company Purchase',nc:'red',
+        note:'Higher residential rates normally apply from £40,000. For certain purchases above £500,000, the 17% charge applies to the full price unless relief applies. Check <a href="https://www.gov.uk/guidance/stamp-duty-land-tax-corporate-bodies">HMRC’s company rules</a> and the <a href="https://www.gov.uk/guidance/rates-of-stamp-duty-land-tax-for-non-uk-residents">non-resident surcharge rules</a> before selecting the options below.'},
+      overseas:{lbl:'Overseas Buyer — first property',note:'Qualifying non-resident transactions pay a <strong>2% surcharge on top of standard rates</strong>. For a freehold residential purchase, it applies from £40,000. New leases can have separate rules for rent.',nc:'blu',sur:2,
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:0},{l:'£125,001 – £250,000',f:125000,t:250000,r:2},{l:'£250,001 – £925,000',f:250000,t:925000,r:5},{l:'£925,001 – £1,500,000',f:925000,t:1500000,r:10},{l:'Over £1,500,000',f:1500000,t:null,r:12}]},
-      overseas_add:{lbl:'Overseas + Additional Property',note:'The <strong>2% non-resident surcharge stacks on top of the 5% additional property surcharge</strong> — a combined 7% above standard rates. The highest individual rate in England, reaching an effective 19% on the top band.',nc:'red',sur:2,
+      overseas_add:{lbl:'Overseas + Additional Property',note:'If both surcharges apply to the purchase, the <strong>2% non-resident surcharge</strong> is added to the higher residential rates. For the purchase price shown here, both apply from £40,000.',nc:'red',sur:2,
         bands:[{l:'£0 – £125,000',f:0,t:125000,r:5},{l:'£125,001 – £250,000',f:125000,t:250000,r:7},{l:'£250,001 – £925,000',f:250000,t:925000,r:10},{l:'£925,001 – £1,500,000',f:925000,t:1500000,r:15},{l:'Over £1,500,000',f:1500000,t:null,r:17}]}
     },
     notes:[
       {i:'📅',t:'Paid within <strong>14 days</strong> of completion to HMRC. Late payment triggers penalties and interest.'},
       {i:'🔑',t:'First-time buyers: 0% up to £300,000; 5% on £300k–£500k. <strong>No relief above £500,000</strong> — standard rates apply to the entire price.'},
-      {i:'🏢',t:'Additional property / BTL: <strong>5% surcharge</strong> on all bands from £0. Raised from 3% in October 2024. Refundable within 36 months if previous main home is sold.'},
-      {i:'🏙️',t:'Company purchase: higher residential rates (5% surcharge) below £500,000; once price exceeds £500,000, a <strong>flat 17% applies to the whole price</strong> (Sch 4A FA 2003), not just the excess — reliefs may reduce or remove this. A non-UK company also faces the 2% non-resident surcharge. ATED may apply annually.'},
+      {i:'🏢',t:'Additional property / BTL: for qualifying purchases of £40,000 or more, the <strong>5% supplement</strong> is charged from the first pound.'},
+      {i:'🏙️',t:'Company purchase: higher residential rates normally apply from £40,000. Certain purchases above £500,000 incur <strong>17% on the whole price</strong>. If relief from that charge applies, the higher residential rates normally apply. Companies subject to the non-resident rules also pay the 2% surcharge. ATED may apply annually.'},
       {i:'🌍',t:'Non-UK residents: <strong>+2% surcharge</strong> on top of all applicable rates. Overseas buyer + additional property = standard + 5% + 2% = up to 19% effective rate on highest band.'},
       {i:'🔄',t:'Additional property surcharge refundable if previous main residence sold within <strong>36 months</strong>. Claim within 12 months of the sale date.'},
       {i:'🏗️',t:'Mixed-use / commercial property taxed at <strong>non-residential rates</strong> — often significantly lower than residential rates.'}
@@ -220,28 +259,28 @@ var D = {
   },
   scotland:{
     name:'Scotland', tax:'Land & Buildings Transaction Tax (LBTT)', short:'LBTT', cls:'sco', dl:'30 days',
-    alert:'<strong>Recent changes:</strong> Additional Dwelling Supplement (ADS) increased from 6% to <strong>8% of the full purchase price</strong> from 5 December 2024. ADS is <strong>not marginal</strong> — it applies to every pound of the purchase price. Scotland has <strong>no separate non-resident surcharge</strong>.',
+    alert:'<strong>Recent changes:</strong> Additional Dwelling Supplement (ADS) increased from 6% to <strong>8% of the full price</strong> from 5 December 2024 for qualifying residential purchases of £40,000 or more. Scotland has <strong>no separate non-resident surcharge</strong>.',
     buyers:{
       standard:{lbl:'Standard Buyer',note:null,nc:null,
         bands:[{l:'£0 – £145,000',f:0,t:145000,r:0},{l:'£145,001 – £250,000',f:145000,t:250000,r:2},{l:'£250,001 – £325,000',f:250000,t:325000,r:5},{l:'£325,001 – £750,000',f:325000,t:750000,r:10},{l:'Over £750,000',f:750000,t:null,r:12}]},
       ftb:{lbl:'First-Time Buyer',note:'Higher nil-rate band of <strong>£175,000</strong> — saving up to £600 vs standard. <strong>No upper price cap</strong> in Scotland; relief applies to properties of any value.',nc:'amb',
         bands:[{l:'£0 – £175,000',f:0,t:175000,r:0},{l:'£175,001 – £250,000',f:175000,t:250000,r:2},{l:'£250,001 – £325,000',f:250000,t:325000,r:5},{l:'£325,001 – £750,000',f:325000,t:750000,r:10},{l:'Over £750,000',f:750000,t:null,r:12}]},
-      additional:{lbl:'Additional / Buy-to-Let',note:'Standard LBTT rates <strong>plus ADS of 8% on the full purchase price</strong> (not marginal). On a £300,000 purchase this is £24,000 in ADS alone. ADS raised from 6% in December 2024.',nc:'red',ads:8,
+      additional:{lbl:'Additional / Buy-to-Let',note:'Standard LBTT rates plus <strong>8% ADS on the full price</strong> for qualifying residential purchases of £40,000 or more. At £300,000 this is £24,000 in ADS alone.',nc:'red',ads:8,
         bands:[{l:'£0 – £145,000',f:0,t:145000,r:0},{l:'£145,001 – £250,000',f:145000,t:250000,r:2},{l:'£250,001 – £325,000',f:250000,t:325000,r:5},{l:'£325,001 – £750,000',f:325000,t:750000,r:10},{l:'Over £750,000',f:750000,t:null,r:12}]},
-      company:{lbl:'Company Purchase',note:'<strong>ADS always applies to company (non-natural person) purchases</strong> regardless of existing ownership — the "one dwelling rule" does not apply to companies. Standard LBTT rates plus 8% ADS on the full price. Scotland has no flat 17% corporate rate.',nc:'red',ads:8,
+      company:{lbl:'Company Purchase',note:'Companies normally pay standard LBTT plus <strong>8% ADS on residential purchases of £40,000 or more</strong>, even on their first dwelling.',nc:'red',ads:8,
         bands:[{l:'£0 – £145,000',f:0,t:145000,r:0},{l:'£145,001 – £250,000',f:145000,t:250000,r:2},{l:'£250,001 – £325,000',f:250000,t:325000,r:5},{l:'£325,001 – £750,000',f:325000,t:750000,r:10},{l:'Over £750,000',f:750000,t:null,r:12}]},
-      overseas:{lbl:'Overseas Buyer — first property',note:'<strong>Scotland has no non-resident surcharge.</strong> An overseas individual buying their first Scottish property pays <strong>standard LBTT rates only</strong> — the same as a UK resident. ADS applies only if they own other property.',nc:'blu',
+      overseas:{lbl:'Overseas Buyer — first property',note:'<strong>Scotland has no non-resident surcharge.</strong> An overseas individual buying their only dwelling normally pays <strong>standard LBTT rates</strong>. Other dwellings owned worldwide can affect ADS.',nc:'blu',
         bands:[{l:'£0 – £145,000',f:0,t:145000,r:0},{l:'£145,001 – £250,000',f:145000,t:250000,r:2},{l:'£250,001 – £325,000',f:250000,t:325000,r:5},{l:'£325,001 – £750,000',f:325000,t:750000,r:10},{l:'Over £750,000',f:750000,t:null,r:12}]},
-      overseas_add:{lbl:'Overseas + Additional Property',note:'No non-resident surcharge in Scotland, but an overseas buyer owning property anywhere in the world triggers ADS. Standard LBTT plus <strong>8% ADS on the full purchase price</strong>.',nc:'red',ads:8,
+      overseas_add:{lbl:'Overseas + Additional Property',note:'There is no separate non-resident surcharge in Scotland. If ADS applies, standard LBTT is charged plus <strong>8% on the full purchase price</strong> from £40,000.',nc:'red',ads:8,
         bands:[{l:'£0 – £145,000',f:0,t:145000,r:0},{l:'£145,001 – £250,000',f:145000,t:250000,r:2},{l:'£250,001 – £325,000',f:250000,t:325000,r:5},{l:'£325,001 – £750,000',f:325000,t:750000,r:10},{l:'Over £750,000',f:750000,t:null,r:12}]}
     },
     notes:[
       {i:'📅',t:'Paid within <strong>30 days</strong> to <strong>Revenue Scotland</strong> — not HMRC.'},
       {i:'🔑',t:'First-time buyer nil-rate band: <strong>£175,000</strong>. No upper price cap. Maximum saving £600 vs standard rates.'},
-      {i:'🏢',t:'Additional property: standard LBTT plus <strong>ADS of 8% on the full purchase price</strong> (flat, not marginal). Raised from 6% in December 2024. Refundable within 18 months if previous main home sold.'},
-      {i:'🏙️',t:'Company purchases: <strong>ADS always applies</strong> regardless of existing ownership. No "one dwelling" exemption for non-natural persons. No separate flat corporate rate.'},
-      {i:'🌍',t:'<strong>No non-resident surcharge in Scotland.</strong> Overseas buyers pay identical rates to UK residents. ADS applies if they own property anywhere in the world.'},
-      {i:'🔄',t:'ADS refundable if previous main residence sold within <strong>18 months</strong> of purchase.'},
+      {i:'🏢',t:'Additional property: standard LBTT plus <strong>ADS of 8% on the full price</strong> for qualifying residential purchases of £40,000 or more.'},
+      {i:'🏙️',t:'Company purchases: <strong>ADS normally applies from £40,000</strong>, even for a company’s first dwelling.'},
+      {i:'🌍',t:'<strong>No non-resident surcharge in Scotland.</strong> Overseas buyers pay the same rates as UK residents. Dwellings owned worldwide can affect ADS.'},
+      {i:'🔄',t:'For purchases from 1 April 2024, an eligible buyer can reclaim ADS if they sell their previous main residence within <strong>36 months</strong> of buying their new home. See <a href="https://revenue.scot/news-publications/news/land-buildings-transaction-tax-lbtt-changes-1">Revenue Scotland’s rules and conditions</a>.'},
       {i:'📋',t:'Scottish Budget 2026-27 confirmed all LBTT rates and ADS remain at current levels.'}
     ]
   },
@@ -253,9 +292,9 @@ var D = {
         bands:[{l:'£0 – £225,000',f:0,t:225000,r:0},{l:'£225,001 – £400,000',f:225000,t:400000,r:6},{l:'£400,001 – £750,000',f:400000,t:750000,r:7.5},{l:'£750,001 – £1,500,000',f:750000,t:1500000,r:10},{l:'Over £1,500,000',f:1500000,t:null,r:12}]},
       ftb:{lbl:'First-Time Buyer',note:'<strong>Wales does not offer first-time buyer relief.</strong> Standard LTT rates apply — identical to all other buyers.',nc:'amb',
         bands:[{l:'£0 – £225,000',f:0,t:225000,r:0},{l:'£225,001 – £400,000',f:225000,t:400000,r:6},{l:'£400,001 – £750,000',f:400000,t:750000,r:7.5},{l:'£750,001 – £1,500,000',f:750000,t:1500000,r:10},{l:'Over £1,500,000',f:1500000,t:null,r:12}]},
-      additional:{lbl:'Additional / Buy-to-Let',note:'Higher residential LTT rates apply — a <strong>completely separate rate structure</strong>, not a surcharge added on top. Rates from <strong>5%–17%</strong> across bands from 11 December 2024.',nc:'red',
+      additional:{lbl:'Additional / Buy-to-Let',note:'The higher residential LTT bands of <strong>5%–17%</strong> apply to qualifying purchases of £40,000 or more.',nc:'red',
         bands:[{l:'£0 – £180,000',f:0,t:180000,r:5},{l:'£180,001 – £250,000',f:180000,t:250000,r:8.5},{l:'£250,001 – £400,000',f:250000,t:400000,r:10},{l:'£400,001 – £750,000',f:400000,t:750000,r:12.5},{l:'£750,001 – £1,500,000',f:750000,t:1500000,r:15},{l:'Over £1,500,000',f:1500000,t:null,r:17}]},
-      company:{lbl:'Company Purchase',note:'Companies buying residential property in Wales pay the <strong>higher residential LTT rates (5%–17%)</strong> — same as additional property buyers. Wales has no flat-rate corporate charge. A return must be filed with the WRA even if no tax is due.',nc:'red',
+      company:{lbl:'Company Purchase',note:'Companies buying residential property in Wales normally pay the <strong>higher residential LTT rates (5%–17%)</strong> on purchases of £40,000 or more.',nc:'red',
         bands:[{l:'£0 – £180,000',f:0,t:180000,r:5},{l:'£180,001 – £250,000',f:180000,t:250000,r:8.5},{l:'£250,001 – £400,000',f:250000,t:400000,r:10},{l:'£400,001 – £750,000',f:400000,t:750000,r:12.5},{l:'£750,001 – £1,500,000',f:750000,t:1500000,r:15},{l:'Over £1,500,000',f:1500000,t:null,r:17}]},
       overseas:{lbl:'Overseas Buyer — first property',note:'<strong>Wales has no non-resident surcharge.</strong> An overseas buyer pays <strong>exactly the same rates as a UK resident</strong>. Standard LTT rates apply for a first property purchase.',nc:'blu',
         bands:[{l:'£0 – £225,000',f:0,t:225000,r:0},{l:'£225,001 – £400,000',f:225000,t:400000,r:6},{l:'£400,001 – £750,000',f:400000,t:750000,r:7.5},{l:'£750,001 – £1,500,000',f:750000,t:1500000,r:10},{l:'Over £1,500,000',f:1500000,t:null,r:12}]},
@@ -263,9 +302,9 @@ var D = {
         bands:[{l:'£0 – £180,000',f:0,t:180000,r:5},{l:'£180,001 – £250,000',f:180000,t:250000,r:8.5},{l:'£250,001 – £400,000',f:250000,t:400000,r:10},{l:'£400,001 – £750,000',f:400000,t:750000,r:12.5},{l:'£750,001 – £1,500,000',f:750000,t:1500000,r:15},{l:'Over £1,500,000',f:1500000,t:null,r:17}]}
     },
     notes:[
-      {i:'📅',t:'Paid within <strong>30 days</strong> to the <strong>Welsh Revenue Authority (WRA)</strong>. A return must be filed even if no tax is due.'},
+      {i:'📅',t:'Paid within <strong>30 days</strong> to the <strong>Welsh Revenue Authority (WRA)</strong>. Check the WRA’s rules on whether a return is required if no tax is due.'},
       {i:'🚫',t:'<strong>No first-time buyer relief in Wales.</strong> All buyers pay identical standard LTT rates regardless of first-time status.'},
-      {i:'🏢',t:'Additional properties and company purchases: <strong>separate higher rate structure 5%–17%</strong> (not a surcharge on top). Updated December 2024.'},
+      {i:'🏢',t:'Additional property and company purchases: <strong>higher rate bands of 5%–17%</strong> apply to qualifying residential purchases of £40,000 or more.'},
       {i:'🌍',t:'<strong>No non-resident surcharge in Wales.</strong> Overseas buyers pay the same rates as UK residents in the same buyer category.'},
       {i:'💡',t:'Wales nil-rate threshold (£225,000) is higher than England (£125,000) — standard buyers on properties up to ~£350k often pay <strong>less in Wales</strong>.'},
       {i:'🔄',t:'Higher rates do not apply when replacing a main residence. Refund available if previous home sold within <strong>36 months</strong>.'}
@@ -273,8 +312,20 @@ var D = {
   }
 };
 
+var nonResidentialBands = {
+  england: [{l:'£0 – £150,000',f:0,t:150000,r:0},{l:'£150,001 – £250,000',f:150000,t:250000,r:2},{l:'Over £250,000',f:250000,t:null,r:5}],
+  scotland: [{l:'£0 – £150,000',f:0,t:150000,r:0},{l:'£150,001 – £250,000',f:150000,t:250000,r:1},{l:'Over £250,000',f:250000,t:null,r:5}],
+  wales: [{l:'£0 – £225,000',f:0,t:225000,r:0},{l:'£225,001 – £250,000',f:225000,t:250000,r:1},{l:'£250,001 – £1,000,000',f:250000,t:1000000,r:5},{l:'Over £1,000,000',f:1000000,t:null,r:6}]
+};
+
+var nonResidentialGuidance = {
+  england: '<a href="https://www.gov.uk/stamp-duty-land-tax/nonresidential-and-mixed-rates">HMRC’s commercial and mixed-use SDLT rates</a>',
+  scotland: '<a href="https://revenue.scot/taxes/land-buildings-transaction-tax/lbtt-legislation-guidance/residentialnon-residential-technical-guidance/lbtt4012-non-residential-transactions">Revenue Scotland’s non-residential LBTT rates</a>',
+  wales: '<a href="https://www.gov.wales/land-transaction-tax-non-residential-mixed-use-property-guide">Welsh Revenue Authority’s commercial and mixed-use LTT guidance</a>'
+};
+
 /* ===== STATE ===== */
-var nation='england', buyer='standard';
+var nation='england', buyer='standard', propertyType='residential';
 
 /* ===== HELPERS ===== */
 function f(v){return'\u00A3'+Math.round(v).toLocaleString('en-GB')}
@@ -290,42 +341,123 @@ function marginal(price,bands){
   return{tot:tot,rows:rows};
 }
 
-function calcTax(price,n,bt){
-  var cfg=D[n].buyers[bt], res={tot:0,rows:[],ads:null,sur:null,note:cfg.note,nc:cfg.nc};
-  // FTB fallback
-  if(bt==='ftb'&&cfg.maxP&&price>cfg.maxP){
-    var fb=cfg.fb||'Standard rates applied.';
-    cfg=D[n].buyers['standard'];
-    res.note=fb; res.nc='amb';
+function calcTax(price,n,bt,options={}){
+  var tax = D[n];
+  var type = options.propertyType || 'residential';
+  if(type !== 'residential'){
+    var nonResidential = marginal(price,nonResidentialBands[n]);
+    var dwellingPrice = options.dwellingPrice || 0;
+    if(n === 'scotland' && type === 'mixed' && dwellingPrice >= 40000){
+      nonResidential.ads = {rate:8,amt:dwellingPrice*0.08,base:dwellingPrice};
+      nonResidential.tot += nonResidential.ads.amt;
+    }
+    return nonResidential;
   }
-  // England corporate 17% flat-rate charge (Sch 4A FA 2003). Once the price exceeds
-  // £500,000 this applies to the ENTIRE consideration, not just the excess, and it
-  // replaces the marginal surcharge bands entirely (subject to available reliefs).
-  if(bt==='company'&&n==='england'&&price>500000){
-    var flat=price*0.17;
-    res.tot=flat;
-    res.rows=[{b:{l:'Flat 17% rate on full consideration (Sch 4A FA 2003)',r:17},tax:flat,tab:price}];
-    res.note='Price exceeds £500,000 \u2014 the 17% rate applies to the <strong>entire</strong> purchase price, not just the amount above £500,000, and replaces the standard surcharge bands entirely. Reliefs (e.g. property rental business, development trade, qualifying housing co-operative) may reduce or remove this charge \u2014 always confirm with a solicitor before relying on it.';
-    res.nc='red';
-    if(cfg.sur){var s=price*cfg.sur/100; res.tot+=s; res.sur={rate:cfg.sur,amt:s};}
-    return res;
+
+  var cfg = tax.buyers[bt];
+  var hasMinimum = bt === 'additional' || bt === 'company' || bt === 'overseas_add' || cfg.sur;
+  if(price < 40000 && hasMinimum){
+    var belowThreshold = marginal(price,tax.buyers.standard.bands);
+    belowThreshold.note = 'The higher residential rates and surcharges shown here require a purchase price of at least £40,000.';
+    if(n === 'england' && bt === 'overseas'){
+      belowThreshold.note = 'The non-resident surcharge applies to freehold residential purchases of £40,000 or more.';
+    }
+    return belowThreshold;
   }
-  var m=marginal(price,cfg.bands);
-  res.tot=m.tot; res.rows=m.rows;
-  if(cfg.ads){var a=price*cfg.ads/100; res.tot+=a; res.ads={rate:cfg.ads,amt:a};}
-  if(cfg.sur){var s=price*cfg.sur/100; res.tot+=s; res.sur={rate:cfg.sur,amt:s};}
+
+  var res;
+  if(n === 'england' && bt === 'company'){
+    if(price > 500000 && !options.companyRelief){
+      var flat = price*0.17;
+      res = {
+        tot:flat,
+        rows:[{b:{l:'Flat 17% rate on full purchase price',r:17},tax:flat,tab:price}],
+        note:'The flat 17% charge applies to the whole price in this scenario. If the company qualifies for relief, select that option above.'
+      };
+    } else {
+      res = marginal(price,tax.buyers.additional.bands);
+      if(price > 500000) res.note = 'With relief from the flat 17% charge, this estimate uses the higher residential bands.';
+    }
+  } else if(bt === 'ftb' && cfg.maxP && price > cfg.maxP){
+    res = marginal(price,tax.buyers.standard.bands);
+    res.note = cfg.fb;
+  } else {
+    res = marginal(price,cfg.bands);
+  }
+
+  if(cfg.ads){
+    res.ads = {rate:cfg.ads,amt:price*cfg.ads/100,base:price};
+    res.tot += res.ads.amt;
+  }
+  var surcharge = n === 'england' && bt === 'company' && options.companyNonResident ? 2 : cfg.sur;
+  if(surcharge){
+    res.sur = {rate:surcharge,amt:price*surcharge/100};
+    res.tot += res.sur.amt;
+  }
   return res;
 }
 
 /* ===== RENDER ===== */
+function updateOptions(price){
+  var residential = propertyType === 'residential';
+  var cfg = D[nation].buyers[buyer];
+  var company = residential && nation === 'england' && buyer === 'company';
+  var mixedScotland = propertyType === 'mixed' && nation === 'scotland';
+  var bn = document.getElementById('bnote');
+  bn.style.display = residential && cfg.note ? 'block' : 'none';
+  bn.className = 'bnote ' + (cfg.nc || 'amb');
+  bn.innerHTML = residential ? cfg.note || '' : '';
+  document.getElementById('buyer-card').hidden = !residential;
+  document.getElementById('company-options').hidden = !company;
+  document.getElementById('company-relief-option').hidden = !company || price <= 500000 || !Number.isFinite(price);
+  document.getElementById('mixed-ads-options').hidden = !mixedScotland;
+  document.getElementById('mixed-price-option').hidden = !mixedScotland || document.getElementById('mixed-ads').value !== 'yes';
+}
+
 function calc(){
-  var price=parseFloat(document.getElementById('price').value)||0;
-  var n=D[nation], res=calcTax(price,nation,buyer), cfg=n.buyers[buyer];
+  clearTimeout(T);
+  var priceField = document.getElementById('price');
+  var price = priceField.valueAsNumber;
+  var dwellingField = document.getElementById('mixed-price');
+  var adsChoice = document.getElementById('mixed-ads');
+  var scottishMixed = nation === 'scotland' && propertyType === 'mixed';
+  var includeMixedAds = scottishMixed && adsChoice.value === 'yes';
+  var dwellingPrice = includeMixedAds ? dwellingField.valueAsNumber : 0;
+  var error = '';
+  updateOptions(price);
+  [priceField,dwellingField,adsChoice].forEach(function(field){field.removeAttribute('aria-invalid');});
+  if(!Number.isFinite(price) || price <= 0 || !priceField.validity.valid){
+    error = 'Enter a purchase price greater than £0, with up to two decimal places.';
+    priceField.setAttribute('aria-invalid','true');
+  } else if(scottishMixed && !adsChoice.value){
+    error = 'Choose whether ADS applies to the dwelling.';
+    adsChoice.setAttribute('aria-invalid','true');
+  } else if(includeMixedAds && (!Number.isFinite(dwellingPrice) || dwellingPrice <= 0 ||
+                                dwellingPrice >= price || !dwellingField.validity.valid)){
+    error = 'Enter a dwelling value greater than £0 and below the full purchase price.';
+    dwellingField.setAttribute('aria-invalid','true');
+  }
+  document.getElementById('calc-error').textContent = error;
+  if(error){
+    document.getElementById('rcard').className = 'rcard';
+    document.getElementById('comp-card').style.display = 'none';
+    return;
+  }
+
+  var n = D[nation];
+  var res = calcTax(price,nation,buyer,{
+    propertyType:propertyType,
+    dwellingPrice:dwellingPrice,
+    companyRelief:document.getElementById('company-relief').checked,
+    companyNonResident:document.getElementById('company-nonresident').checked
+  });
+  var purchaseLabel = propertyType === 'residential' ? n.buyers[buyer].lbl :
+    propertyType === 'mixed' ? 'Mixed-use property' : 'Commercial / non-residential property';
 
   document.getElementById('rcard').className='rcard show';
   document.getElementById('rhdr').className='rhdr '+n.cls;
   document.getElementById('rtname').textContent=n.tax;
-  document.getElementById('rsub').textContent=n.name+' \u2014 '+cfg.lbl;
+  document.getElementById('rsub').textContent=n.name+' · '+purchaseLabel;
   document.getElementById('rtot').textContent=f(res.tot);
 
   var tb=document.getElementById('btbody'); tb.innerHTML='';
@@ -347,7 +479,7 @@ function calc(){
 
   if(res.ads){
     var r=tb.insertRow(); r.className='sr';
-    r.innerHTML='<td colspan="3">\u2795 Additional Dwelling Supplement (ADS) \u2014 '+res.ads.rate+'% of full price '+f(price)+'</td><td>'+f(res.ads.amt)+'</td>';
+    r.innerHTML='<td colspan="3">\u2795 Additional Dwelling Supplement (ADS) \u2014 '+res.ads.rate+'% of '+(propertyType === 'mixed' ? 'the dwelling share ' : 'the full price ')+f(res.ads.base)+'</td><td>'+f(res.ads.amt)+'</td>';
   }
   if(res.sur){
     var r=tb.insertRow(); r.className='sr';
@@ -357,7 +489,7 @@ function calc(){
   var r=tb.insertRow(); r.className='tot';
   r.innerHTML='<td colspan="3">Total Tax Due</td><td>'+f(res.tot)+'</td>';
 
-  var eff=price>0?res.tot/price*100:0;
+  var eff=res.tot/price*100;
   document.getElementById('srow').innerHTML=
     '<div class="sb"><div class="sbl">Tax Due</div><div class="sbv '+(res.tot===0?'g':'r')+'">'+f(res.tot)+'</div></div>'+
     '<div class="sb"><div class="sbl">Effective Rate</div><div class="sbv">'+eff.toFixed(2)+'%</div></div>'+
@@ -368,11 +500,14 @@ function calc(){
 }
 
 function showComp(price){
-  if(price<=0)return;
   document.getElementById('comp-card').style.display='block';
-  var e=calcTax(price,'england','standard').tot;
-  var s=calcTax(price,'scotland','standard').tot;
-  var w=calcTax(price,'wales','standard').tot;
+  document.getElementById('comp-heading').textContent = propertyType === 'residential'
+    ? 'UK comparison at the standard residential rates'
+    : 'UK comparison at the non-residential rates, before any Scottish ADS';
+  var options={propertyType:propertyType};
+  var e=calcTax(price,'england','standard',options).tot;
+  var s=calcTax(price,'scotland','standard',options).tot;
+  var w=calcTax(price,'wales','standard',options).tot;
   var mn=Math.min(e,s,w), mx=Math.max(e,s,w);
   var data=[{n:'england',l:'England / N.I.',a:e},{n:'scotland',l:'Scotland',a:s},{n:'wales',l:'Wales',a:w}];
   document.getElementById('cgrid').innerHTML=data.map(function(d){
@@ -383,33 +518,69 @@ function showComp(price){
   }).join('');
 }
 
-function setN(n,btn){
-  nation=n;
-  document.querySelectorAll('.nbtn').forEach(function(b){b.classList.remove('on');});
-  btn.classList.add('on');
-  var nd=D[n];
+function markSelected(selector,button){
+  document.querySelectorAll(selector).forEach(function(option){
+    var selected=option === button;
+    option.classList.toggle('on',selected);
+    option.setAttribute('aria-pressed',String(selected));
+  });
+}
+
+function renderContext(){
+  var nd=D[nation];
+  var residential=propertyType === 'residential';
   var badge=document.getElementById('nbadge');
   badge.className='card nbadge '+nd.cls;
   document.getElementById('nbt').textContent=nd.tax;
-  document.getElementById('nbs').textContent=nd.name+' \u2014 '+nd.short;
+  document.getElementById('nbs').textContent=nd.name+' · '+nd.short;
+  document.querySelector('.alrt').hidden=!residential;
   document.getElementById('alrt-txt').innerHTML=nd.alert;
   document.getElementById('nnm').textContent=nd.name;
-  document.getElementById('notes').innerHTML=nd.notes.map(function(x){
+  var notes = residential ? nd.notes : [
+    nd.notes[0],
+    {i:'🏗️',t:'Commercial and mixed-use purchases generally use non-residential bands. See '+nonResidentialGuidance[nation]+'.'}
+  ];
+  document.getElementById('notes').innerHTML=notes.map(function(x){
     return'<div class="ni"><span>'+x.i+'</span><span>'+x.t+'</span></div>';
   }).join('');
-  // Update FTB label for Wales
-  document.getElementById('p-ftb').innerHTML=n==='wales'?'&#x1F511; First-Time Buyer <span style="font-size:.7em;opacity:.7">(no relief)</span>':'&#x1F511; First-Time Buyer';
+  document.getElementById('p-ftb').innerHTML=nation === 'wales'
+    ? '&#x1F511; First-Time Buyer <span style="font-size:.7em;opacity:.7">(no relief)</span>'
+    : '&#x1F511; First-Time Buyer';
+}
+
+function resetCompanyOptions(){
+  document.getElementById('company-relief').checked=false;
+  document.getElementById('company-nonresident').checked=false;
+}
+
+function resetMixedOptions(){
+  document.getElementById('mixed-ads').value='';
+  document.getElementById('mixed-price').value='';
+}
+
+function setN(n,btn){
+  if(nation !== n){
+    resetCompanyOptions();
+    resetMixedOptions();
+  }
+  nation=n;
+  markSelected('.nbtn',btn);
+  renderContext();
   calc();
 }
 
 function setB(t,btn){
+  if(buyer !== t) resetCompanyOptions();
   buyer=t;
-  document.querySelectorAll('.pill').forEach(function(p){p.classList.remove('on');});
-  btn.classList.add('on');
-  var cfg=D[nation].buyers[t];
-  var bn=document.getElementById('bnote');
-  if(cfg&&cfg.note){bn.style.display='block';bn.className='bnote '+(cfg.nc||'amb');bn.innerHTML=cfg.note;}
-  else{bn.style.display='none';}
+  markSelected('#buyer-card .pill',btn);
+  calc();
+}
+
+function setPropertyType(){
+  propertyType=document.getElementById('property-type').value;
+  resetCompanyOptions();
+  resetMixedOptions();
+  renderContext();
   calc();
 }
 
@@ -418,6 +589,11 @@ function autoCalc(){clearTimeout(T);T=setTimeout(calc,350);}
 
 // Init
 setN('england',document.querySelector('.nbtn.eng'));
+['price','mixed-price'].forEach(function(id){
+  document.getElementById(id).addEventListener('keydown',function(event){
+    if(event.key === 'Enter') calc();
+  });
+});
 </script>
 </body>
 </html>
